@@ -132,9 +132,9 @@ for root, subdirs, files in os.walk(upload_folder):
     for file_name in files:
         # Ignore hidden files always
         if file_name.startswith('.'):
-            print(f'    (skipping hidden file {file_name}....)')
+            print(f'    (skipping hidden file {file_name} ...)')
             continue
-        print('    ' + file_name)
+        print(f'    {file_name}')
         file_path = os.path.join(root, file_name)
         file_info.append((file_name, file_path))
 
