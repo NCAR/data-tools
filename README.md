@@ -9,7 +9,7 @@ These are the command-line utilities:
 * **dset2iso.py** : produce an ISO XML file from a JSON file containing elements from the NCAR DSET Metadata Dialect, version 12.
 * **xpath.py** :  print text values for a given XML element in an ISO record or group of records.
 
-These utilities require python 3 and the python 'lxml' library (version 3.6 or greater).
+These utilities require python 3, and the python 'lxml' and 'requests' library.  Use the provided conda or pip environment files to create a usable python environment.
 
 ## Installation Instructions
 
