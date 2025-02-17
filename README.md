@@ -24,7 +24,7 @@ A program for uploading files to Zenodo.
 
 An API token for Zenodo is required.  Before running the program, set the API token value as follows:
 
- export ZENODO_TOKEN='<my_token>'
+       export ZENODO_TOKEN='<my_token>'
  
 Also required is a path to a folder with files to upload.  All files in the folder and its sub-folders 
 will be uploaded.  If the upload folder contains spaces, then surround the path in single quotes.
