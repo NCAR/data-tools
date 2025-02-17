@@ -20,7 +20,7 @@ See [INSTALL.md](./INSTALL.md) for instructions on how to install these commands
 
 ### zenodo_create.py
 
-A program for uploading files and metadata to Zenodo.  
+A program for uploading files to Zenodo.  
 
 An API token for Zenodo is required.  Before running the program, set the API token value as follows:
 
@@ -35,10 +35,14 @@ Example usage:
 
 Optional arguments:
 
-       --test                 Upload to Zenodo's sandbox server instead; requires a separate API TOKEN
-       --resume <bucket_url>  Resume uploading to a specific bucket URL
-       --version              Print the program version and exit.
-       --help                 Print the program description and exit.
+       --iso_file <iso_file_path>    Path to ISO XML Metadata file for metadata extraction and upload
+       --resume <resume_file_path>   Resume uploading to a recently created dataset using an automatically generated 
+                                     resume file; default location is /tmp/resume_upload_<dataset_id>.json
+       --test                        Upload to Zenodo's sandbox server instead; requires a separate API TOKEN
+       --version                     Print the program version and exit.
+       --help                        Print the program description and exit.
+
+Tested with python 3.8.
 
 
 ### datacite2iso.py
