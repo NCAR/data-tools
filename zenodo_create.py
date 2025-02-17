@@ -24,11 +24,12 @@ Example usage:
 
 Optional arguments:
 
-       --iso_file <file_path>   Path to ISO XML Metadata file
-       --test                   Upload to Zenodo's sandbox server instead; requires a separate API TOKEN
-       --resume <bucket_url>    Resume uploading to a specific bucket URL
-       --version                Print the program version and exit.
-       --help                   Print the program description and exit.
+       --iso_file <iso_file_path>    Path to ISO XML Metadata file for metadata extraction and upload
+       --resume <resume_file_path>   Resume uploading to a recently created dataset using an automatically generated 
+                                     resume file; default location is /tmp/resume_upload_<dataset_id>.json
+       --test                        Upload to Zenodo's sandbox server instead; requires a separate API TOKEN
+       --version                     Print the program version and exit.
+       --help                        Print the program description and exit.
 
 Tested with python 3.8.
 
