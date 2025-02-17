@@ -126,12 +126,13 @@ print(f'upload_folder == "{upload_folder}"\n\n')
 
 upload_folder = os.path.abspath(upload_folder)
 file_info = []
-print(f'Files in {upload_folder}:')
+print(f'Files to upload in {upload_folder}:')
 
 for root, subdirs, files in os.walk(upload_folder):
     for file_name in files:
-        # Ignore .DS_Store files always
-        if file_name == '.DS_Store':
+        # Ignore hidden files always
+        if file_name.startswith('.'):
+            print(f'    (skipping hidden file {file_name}....)')
             continue
         print('    ' + file_name)
         file_path = os.path.join(root, file_name)
