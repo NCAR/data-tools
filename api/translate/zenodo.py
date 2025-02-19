@@ -1,4 +1,5 @@
 
+from api.util.xml import getElementText, ISO_NAMESPACES
 
 Person_ISO_to_Zenodo = {
     'individualName': 'name',
@@ -59,11 +60,6 @@ childXPaths = {
     'collectionTitle': 'gmd:MD_AggregateInformation/gmd:aggregateDataSetName/gmd:CI_Citation/gmd:title/gco:CharacterString',
 }
 
-ISO_NAMESPACES = {'gmd': 'http://www.isotc211.org/2005/gmd',
-                  'xlink': 'http://www.w3.org/1999/xlink',
-                  'gco': 'http://www.isotc211.org/2005/gco',
-                  'gml': 'http://www.opengis.net/gml'}
-
 
 def getElementsMatchingRole(roleString, contactXPath, roleCodeXPath, xml_tree):
     """ Get all XML contact elements matching a specific role for the given contact XPath.
@@ -78,8 +74,6 @@ def getElementsMatchingRole(roleString, contactXPath, roleCodeXPath, xml_tree):
             matchingContactElements.append(contactElement)
 
     return matchingContactElements
-
-
 
 def getRoleMatchesAsJson(roleString, contactXPath, roleCodeXPath, xml_tree):
     """
@@ -109,8 +103,6 @@ def getRoleMatchesAsJson(roleString, contactXPath, roleCodeXPath, xml_tree):
 
     return foundPeople
 
-
-
 def get_lastname_firstname(name_string):
     """
     This function takes a person's full name, and if it has one whitespace separating two words and no commas,
@@ -125,7 +117,6 @@ def get_lastname_firstname(name_string):
         return_value = "%s, %s" % (words[1], words[0])
     return return_value
 
-
 def get_creators_as_json(xml_tree):
     """
     Searches an ISO XML element tree for authors and returns a JSON description of them according to Zenodo's
@@ -134,3 +125,24 @@ def get_creators_as_json(xml_tree):
     authorJson = getRoleMatchesAsJson('author', parentXPaths['citedContact'], childXPaths['roleCode'], xml_tree)
     return authorJson
 
+
+def is_DOI(urlString):
+    """  Returns True if urlString appears to be a DOI.  Otherwise, it returns False.
+    """
+    is_doi = False
+    if urlString:
+       if urlString.startswith('http://doi.org/') or urlString.startswith('https://doi.org/'):
+          is_doi = True
+    return is_doi
+
+
+def get_DOI(xml_tree):
+    """
+    If required landing page is a DOI, return it as a string.  Otherwise, return None.
+    """
+    doi_string = None
+    xpath = parentXPaths['landingPage']
+    landing_page = getElementText(xpath, xml_tree)
+    if is_DOI(landing_page):
+        doi_string = landing_page
+    return doi_string

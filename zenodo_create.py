@@ -4,8 +4,9 @@ import requests
 import argparse
 import os
 import json
-from lxml import etree as ElementTree       # ISO XML parser
-from api.translate.zenodo import get_creators_as_json, ISO_NAMESPACES
+
+from api.util.xml import getXMLTree, getElementText
+from api.translate.zenodo import get_creators_as_json, get_DOI
 
 PROGRAM_DESCRIPTION = '''
 
@@ -24,11 +25,11 @@ Example usage:
 
 Optional arguments:
 
-       --iso_file <iso_file_path>    Path to ISO XML Metadata file for metadata extraction and upload
+       --iso_file <iso_file_path>    Extract and upload metadata from ISO XML file. 
        --resume <resume_file_path>   Resume uploading to a recently created dataset using an automatically generated 
-                                     resume file; default location is /tmp/resume_upload_<dataset_id>.json
-       --publish                     After upload, publish the dataset
-       --test                        Upload to Zenodo's sandbox server instead; requires a separate API TOKEN
+                                     resume file; default location is /tmp/resume_upload_<dataset_id>.json .
+       --publish                     After upload, publish the dataset.
+       --test                        Upload to Zenodo's sandbox server instead; requires a sandbox API token.
        --version                     Print the program version and exit.
        --help                        Print the program description and exit.
 
@@ -49,12 +50,6 @@ METADATA_PATHS = {
     'description'      : '/gmd:MD_Metadata/gmd:identificationInfo/gmd:MD_DataIdentification/gmd:abstract/gco:CharacterString',
 }
 
-
-
-def getXMLTree(iso_file_path):
-    tree = ElementTree.parse(iso_file_path)
-    root = tree.getroot()
-    return root
 
 #
 #  Parse the command line options.
@@ -92,14 +87,19 @@ if iso_file != 'None':
     # Parse ISO XML file and pull metadata according to METADATA_PATHS.
     xml_root = getXMLTree(iso_file)
     for (key, xpath) in METADATA_PATHS.items():
-        element = xml_root.xpath(xpath, namespaces=ISO_NAMESPACES)
-        value = element[0].text
+        value = getElementText(xpath, xml_root)
         metadata[key] = value
 
     # Add fields required by Zenodo
     authors_json = get_creators_as_json(xml_root)
     metadata['creators'] = authors_json
     metadata['upload_type'] = 'dataset'
+
+    # Add DOI if it exists already
+    doi_string = get_DOI(xml_root)
+    if doi_string:
+        metadata['doi'] = doi_string
+
     metadata_pretty = json.dumps(metadata, indent=4)
     print(f'metadata = {metadata_pretty}')
 
