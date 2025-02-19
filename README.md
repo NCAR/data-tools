@@ -35,10 +35,11 @@ Example usage:
 
 Optional arguments:
 
-       --iso_file <iso_file_path>    Path to ISO XML Metadata file for metadata extraction and upload
+       --iso_file <iso_file_path>    Extract and upload metadata from ISO XML file. 
        --resume <resume_file_path>   Resume uploading to a recently created dataset using an automatically generated 
-                                     resume file; default location is /tmp/resume_upload_<dataset_id>.json
-       --test                        Upload to Zenodo's sandbox server instead; requires a separate API TOKEN
+                                     resume file; default location is /tmp/resume_upload_<dataset_id>.json .
+       --publish                     After upload, publish the dataset.
+       --test                        Upload to Zenodo's sandbox server instead; requires a sandbox API token.
        --version                     Print the program version and exit.
        --help                        Print the program description and exit.
 
