@@ -36,9 +36,11 @@ def getElementText(xpath, xml_root):
     """
     Return text from element; expected is that xpath contains gco:CharacterString.
     """
-    assert 'gco:CharacterString' in xpath
+    assert ('gco:CharacterString' in xpath) or ('gco:Date' in xpath)
+    value = None
     element = xml_root.xpath(xpath, namespaces=ISO_NAMESPACES)
-    value = element[0].text
+    if element:
+        value = element[0].text
     return value
 
 

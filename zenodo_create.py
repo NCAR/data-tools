@@ -5,8 +5,7 @@ import argparse
 import os
 import json
 
-from api.util.xml import getXMLTree, getElementText
-from api.translate.zenodo import get_creators_as_json, get_DOI
+from api.translate.zenodo import extract_metadata
 
 PROGRAM_DESCRIPTION = '''
 
@@ -42,16 +41,6 @@ __version__ = '-'.join(__version_info__)
 
 
 #
-#  ISO File Metadata Mappings for Zenodo
-#
-
-METADATA_PATHS = {
-    'title'            : '/gmd:MD_Metadata/gmd:identificationInfo/gmd:MD_DataIdentification/gmd:citation/gmd:CI_Citation/gmd:title/gco:CharacterString',
-    'description'      : '/gmd:MD_Metadata/gmd:identificationInfo/gmd:MD_DataIdentification/gmd:abstract/gco:CharacterString',
-}
-
-
-#
 #  Parse the command line options.
 #
 
@@ -83,25 +72,7 @@ if resume_file != 'None':
 metadata = {}
 if iso_file != 'None':
     assert(os.path.isfile(iso_file))
-
-    # Parse ISO XML file and pull metadata according to METADATA_PATHS.
-    xml_root = getXMLTree(iso_file)
-    for (key, xpath) in METADATA_PATHS.items():
-        value = getElementText(xpath, xml_root)
-        metadata[key] = value
-
-    # Add fields required by Zenodo
-    authors_json = get_creators_as_json(xml_root)
-    metadata['creators'] = authors_json
-    metadata['upload_type'] = 'dataset'
-
-    # Add DOI if it exists already
-    doi_string = get_DOI(xml_root)
-    if doi_string:
-        metadata['doi'] = doi_string
-
-    metadata_pretty = json.dumps(metadata, indent=4)
-    print(f'metadata = {metadata_pretty}')
+    metadata = extract_metadata(iso_file)
 
 
 if TEST_UPLOAD:

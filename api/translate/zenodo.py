@@ -1,5 +1,6 @@
 
-from api.util.xml import getElementText, ISO_NAMESPACES
+import json
+from api.util.xml import getXMLTree, getElementText, ISO_NAMESPACES
 
 Person_ISO_to_Zenodo = {
     'individualName': 'name',
@@ -59,6 +60,43 @@ childXPaths = {
     'collectionID':    'gmd:MD_AggregateInformation/gmd:aggregateDataSetName/gmd:CI_Citation/gmd:identifier/gmd:MD_Identifier/gmd:code/gco:CharacterString',
     'collectionTitle': 'gmd:MD_AggregateInformation/gmd:aggregateDataSetName/gmd:CI_Citation/gmd:title/gco:CharacterString',
 }
+
+#
+#  ISO File Metadata Mappings for Zenodo
+#
+
+METADATA_PATHS = {
+    'title'            : '/gmd:MD_Metadata/gmd:identificationInfo/gmd:MD_DataIdentification/gmd:citation/gmd:CI_Citation/gmd:title/gco:CharacterString',
+    'description'      : '/gmd:MD_Metadata/gmd:identificationInfo/gmd:MD_DataIdentification/gmd:abstract/gco:CharacterString',
+}
+
+def extract_metadata(iso_file):
+    """
+    Parse ISO XML file and pull metadata for Zenodo upload.
+    """
+    metadata = {}
+    xml_root = getXMLTree(iso_file)
+    for (key, xpath) in METADATA_PATHS.items():
+        value = getElementText(xpath, xml_root)
+        metadata[key] = value
+
+    # Add fields required by Zenodo
+    authors_json = get_creators_as_json(xml_root)
+    metadata['creators'] = authors_json
+    metadata['upload_type'] = 'dataset'
+
+    # Add DOI if it exists already
+    doi_string = get_DOI(xml_root)
+    if doi_string:
+        metadata['doi'] = doi_string
+
+    # Add publication date
+    date_string = get_publication_date(xml_root)
+    if date_string:
+        metadata['publication_date'] = date_string
+    metadata_pretty = json.dumps(metadata, indent=4)
+    print(f'metadata = {metadata_pretty}')
+    return metadata
 
 
 def getElementsMatchingRole(roleString, contactXPath, roleCodeXPath, xml_tree):
@@ -146,3 +184,12 @@ def get_DOI(xml_tree):
     if is_DOI(landing_page):
         doi_string = landing_page
     return doi_string
+
+def get_publication_date(xml_tree):
+    """
+    Extract ISO 8601 date and make sure timestamp is removed.
+    """
+    date_string = getElementText(parentXPaths['publicationDate'], xml_tree)
+    if 'T' in date_string:
+        date_string = date_string.split('T')[0]
+    return date_string
