@@ -34,36 +34,41 @@ def toString(xml_tree):
 #
 # XML Element Query operations
 #
+def getElements(baseElement, elementPath):
+    """ Search XML element tree and return all matching elements """
+    elements = baseElement.xpath(elementPath, namespaces=XML_NAMESPACE_MAP)
+    assert elements != None
+    return elements
+
+def getFirstElement(baseElement, elementPath):
+    """ Search XML element tree and return the first matching element """
+    elements = getElements(baseElement, elementPath)
+    element = getFirst(elements)
+    return element
+
+def getLastElement(baseElement, elementPath):
+    """ Search XML element tree and return the first matching element """
+    elements = getElements(baseElement, elementPath)
+    element = getLast(elements)
+    return element
+
 def getFirst(someList):
-    ''' Return first item in a list if list is nonempty (returns None otherwise). '''
+    """ Return first item in a list if list is nonempty (returns None otherwise). """
     if someList:
         return someList[0]
     return None
 
-def getLast(someList): 
-    ''' Return last item in a list if list is nonempty (returns None otherwise). '''
+def getLast(someList):
+    """ Return last item in a list if list is nonempty (returns None otherwise). """
     if someList:
         return someList[-1]
     return None
 
-def getElement(baseElement, elementPath):
-    ''' Search XML element tree and return the first matching element '''
-    elements = baseElement.xpath(elementPath, namespaces=XML_NAMESPACE_MAP)
-    element = getFirst(elements)
-    assert element != None
-    return element
-
-def getLastElement(baseElement, elementPath):
-    ''' Search XML element tree and return the first matching element '''
-    elements = baseElement.xpath(elementPath, namespaces=XML_NAMESPACE_MAP)
-    element = getLast(elements)
-    assert element != None
-    return element
 
 
 def cutElement(baseElement, elementPath, returnIndex = False):
-    ''' Search XML element tree and cut the first matching element. '''
-    elements = baseElement.xpath(elementPath, namespaces=XML_NAMESPACE_MAP)
+    """ Search XML element tree and cut the first matching element. """
+    elements = getElements(baseElement, elementPath)
     element = getFirst(elements)
 
     parent = element.getparent()
@@ -76,7 +81,7 @@ def cutElement(baseElement, elementPath, returnIndex = False):
         return element, parent
 
 def copyElement(element):
-    ''' Create a deep copy of some XML element. '''
+    """ Create a deep copy of some XML element. """
     elementCopy = deepcopy(element)
     return elementCopy
 
@@ -107,7 +112,7 @@ def setTextOrMarkMissing(element, fillText, setCodeListValue = False):
 
 def setElementValue(xmlTreeRoot, xPath, value, setCodeListValue = False):
     """ Set the text value, and optionally the code list value, of an element in an XML tree. """
-    element = getElement(xmlTreeRoot, xPath)
+    element = getFirstElement(xmlTreeRoot, xPath)
     setTextOrMarkMissing(element, value, setCodeListValue)
 
 
@@ -116,7 +121,7 @@ def setElementValue(xmlTreeRoot, xPath, value, setCodeListValue = False):
 #
 
 def addChildList(xml_root, elementXPath, childXPath, valueList, setCodeListValue = False):
-    element = getElement(xml_root, elementXPath)
+    element = getFirstElement(xml_root, elementXPath)
     emptyChild, parent = cutElement(element, childXPath)
     for value in valueList:
         childCopy = copyElement(emptyChild)

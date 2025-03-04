@@ -66,22 +66,22 @@ def transformOptionalFields(root, record):
 
     # - Software Implementation Language: not repeatable
     if 'software_implementation_language' in record:
-        languageElement = xml.getElement(root, parentXPaths['softwareLanguage'])
+        languageElement = xml.getFirstElement(root, parentXPaths['softwareLanguage'])
         xml.setTextOrMarkMissing(languageElement, record['software_implementation_language'])
     else:
         xml.cutElement(root, parentXPaths['softwareLanguage'])
 
     # - Additional Information: not repeatable
     if 'additional_information' in record:
-        informationElement = xml.getElement(root, parentXPaths['additionalInfo'])
+        informationElement = xml.getFirstElement(root, parentXPaths['additionalInfo'])
         xml.setElementValue(informationElement, 'gco:CharacterString', record['additional_information'])
     else:
         xml.cutElement(root, parentXPaths['additionalInfo'])
 
     # - Distributor: not repeatable
     if 'distributor' in record:
-        distributorElement = xml.getElement(root, parentXPaths['distributor'])
-        contactElement = xml.getElement(distributorElement, 'gmd:MD_Distributor/gmd:distributorContact/gmd:CI_ResponsibleParty')
+        distributorElement = xml.getFirstElement(root, parentXPaths['distributor'])
+        contactElement = xml.getFirstElement(distributorElement, 'gmd:MD_Distributor/gmd:distributorContact/gmd:CI_ResponsibleParty')
         iso.modifyContactData(contactElement, record['distributor'], 'distributor')
     else:
         xml.cutElement(root, parentXPaths['distributor'])
@@ -100,7 +100,7 @@ def transformOptionalFields(root, record):
 
     # - Asset Size: not repeatable
     if 'asset_size_MB' in record:
-        sizeElement = xml.getElement(root, parentXPaths['assetSize'])
+        sizeElement = xml.getFirstElement(root, parentXPaths['assetSize'])
         xml.setElementValue(sizeElement, 'gmd:MD_DigitalTransferOptions/gmd:transferSize/gco:Real', record['asset_size_MB'])
     else:
         xml.cutElement(root, parentXPaths['assetSize'])

@@ -1,4 +1,5 @@
 
+from api.util.xml import getElements, getFirstElement
 
 Person_ISO_to_Zenodo = {
     'individualName': 'name',
@@ -34,6 +35,7 @@ parentXPaths = {
     'resourceType'     : '/gmd:MD_Metadata/gmd:identificationInfo/gmd:MD_DataIdentification/gmd:descriptiveKeywords/gmd:MD_Keywords/gmd:thesaurusName/gmd:CI_Citation/gmd:title/gco:CharacterString[contains(., "Resource Type")]/../../../../gmd:keyword/gco:CharacterString',
     'legalConstraints' : '/gmd:MD_Metadata/gmd:identificationInfo/gmd:MD_DataIdentification/gmd:resourceConstraints/gmd:MD_LegalConstraints/gmd:useLimitation/gco:CharacterString',
     'accessConstraints': '/gmd:MD_Metadata/gmd:identificationInfo/gmd:MD_DataIdentification/gmd:resourceConstraints/gmd:MD_LegalConstraints/gmd:otherConstraints/gco:CharacterString',
+    'geographicExtent' : '/gmd:MD_Metadata/gmd:identificationInfo/gmd:MD_DataIdentification/gmd:extent/gmd:EX_Extent/gmd:geographicElement/gmd:EX_GeographicBoundingBox',
 }
 
 childXPaths = {
@@ -57,12 +59,34 @@ childXPaths = {
     'initiativeType':  'gmd:MD_AggregateInformation/gmd:initiativeType/gmd:DS_InitiativeTypeCode',
     'collectionID':    'gmd:MD_AggregateInformation/gmd:aggregateDataSetName/gmd:CI_Citation/gmd:identifier/gmd:MD_Identifier/gmd:code/gco:CharacterString',
     'collectionTitle': 'gmd:MD_AggregateInformation/gmd:aggregateDataSetName/gmd:CI_Citation/gmd:title/gco:CharacterString',
+    'westLon':         'gmd:westBoundLongitude/gco:Decimal',
+    'eastLon':         'gmd:eastBoundLongitude/gco:Decimal',
+    'southLat':        'gmd:southBoundLatitude/gco:Decimal',
+    'northLat':        'gmd:northBoundLatitude/gco:Decimal',
 }
 
 ISO_NAMESPACES = {'gmd': 'http://www.isotc211.org/2005/gmd',
                   'xlink': 'http://www.w3.org/1999/xlink',
                   'gco': 'http://www.isotc211.org/2005/gco',
                   'gml': 'http://www.opengis.net/gml'}
+
+def get_spatial_locations(xml_tree):
+    """
+    Zenodo only supports a list of points for their spatial extent metadata.
+    In contrast, Bounding box is the only spatial representation type supported by GDEX.
+    Grab and return in a dictionary format supported by Zenodo.
+    """
+    locations = []
+    geoExtents = getElements(xml_tree, parentXPaths['geographicExtent'])
+    for geoExtent in geoExtents:
+        westLon = getFirstElement(geoExtent, childXPaths['westLon']).text
+        eastLon = getFirstElement(geoExtent, childXPaths['eastLon']).text
+        southLat = getFirstElement(geoExtent, childXPaths['southLat']).text
+        northLat = getFirstElement(geoExtent, childXPaths['northLat']).text
+        if westLon == eastLon and southLat == northLat:
+            location = {'lat': southLat, 'lon': westLon, 'place': 'Missing Place Name'}
+            locations.append(location)
+    return locations
 
 
 def getElementsMatchingRole(roleString, contactXPath, roleCodeXPath, xml_tree):

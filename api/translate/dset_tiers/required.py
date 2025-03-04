@@ -35,7 +35,7 @@ def transformRequiredFields(root, record):
 
     # - Metadata Point of Contact: not repeatable
     if 'metadata_contact' in record:
-        element = xml.getElement(root, parentXPaths['metadataContact'])
+        element = xml.getFirstElement(root, parentXPaths['metadataContact'])
         iso.modifyContactData(element, record['metadata_contact'], 'pointOfContact')
 
     # - Metadata Date (not repeatable): Use current time if not present in the record. 
@@ -63,7 +63,7 @@ def transformRequiredFields(root, record):
     firstLoopIteration = True
     for author in authors:
         if firstLoopIteration:
-            contactElement = xml.getElement(root, parentXPaths['citedContact'])
+            contactElement = xml.getFirstElement(root, parentXPaths['citedContact'])
             iso.modifyContactData(contactElement, author, 'author')
         else:
             iso.appendContactData(root, parentXPaths['citedContact'], author, 'author')
@@ -79,7 +79,7 @@ def transformRequiredFields(root, record):
 
     # - Resource Support Contact: not repeatable
     if 'resource_support' in record:
-        element = xml.getElement(root, parentXPaths['supportContact'])
+        element = xml.getFirstElement(root, parentXPaths['supportContact'])
         iso.modifyContactData(element, record['resource_support'], 'pointOfContact')
 
     # - DataCite Resource Type: not repeatable

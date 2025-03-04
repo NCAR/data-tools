@@ -5,7 +5,7 @@ import argparse
 import os
 import json
 from lxml import etree as ElementTree       # ISO XML parser
-from api.translate.zenodo import get_creators_as_json, ISO_NAMESPACES
+from api.translate.zenodo import get_creators_as_json, get_spatial_locations, ISO_NAMESPACES
 
 PROGRAM_DESCRIPTION = '''
 
@@ -86,7 +86,7 @@ metadata = {}
 if iso_file != 'None':
     assert(os.path.isfile(iso_file))
 
-    # Parse ISO XML file and pull metadata according to METADATA_PATHS.
+    # Parse ISO XML file and pull metadata according to METADATA_PATHS
     xml_root = getXMLTree(iso_file)
     for (key, xpath) in METADATA_PATHS.items():
         element = xml_root.xpath(xpath, namespaces=ISO_NAMESPACES)
@@ -97,6 +97,13 @@ if iso_file != 'None':
     authors_json = get_creators_as_json(xml_root)
     metadata['creators'] = authors_json
     metadata['upload_type'] = 'dataset'
+
+    # Add optional metadata if it exists
+    locations = get_spatial_locations(xml_root)
+    if locations:
+        metadata['locations'] = locations
+
+    # Provide verbose feedback on the command line
     metadata_pretty = json.dumps(metadata, indent=4)
     print(f'metadata = {metadata_pretty}')
 
