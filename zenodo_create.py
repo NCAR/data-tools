@@ -211,7 +211,7 @@ if metadata:
 TEST_PUBLISH = False
 if TEST_PUBLISH:
     r = requests.post(upload_url + '/%s/actions/publish' % dataset_id, params=params)
-    print(f'Publish status code: {r.status_code}')
+    print(f'\nPublish status code: {r.status_code}')
 
 
 
