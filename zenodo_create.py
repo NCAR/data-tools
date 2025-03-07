@@ -5,7 +5,8 @@ import argparse
 import os
 import json
 from lxml import etree as ElementTree       # ISO XML parser
-from api.translate.zenodo import get_creators_as_json, get_spatial_locations, ISO_NAMESPACES
+from api.translate.zenodo import get_creators_as_json, get_spatial_locations, get_temporal_extents, ISO_NAMESPACES
+from api.util.xml import getFirstElement
 
 PROGRAM_DESCRIPTION = '''
 
@@ -35,7 +36,7 @@ Tested with python 3.8.
 
 Program Version: '''
 
-__version_info__ = ('2025', '02', '07')
+__version_info__ = ('2025', '03', '07')
 __version__ = '-'.join(__version_info__)
 
 
@@ -89,8 +90,8 @@ if iso_file != 'None':
     # Parse ISO XML file and pull metadata according to METADATA_PATHS
     xml_root = getXMLTree(iso_file)
     for (key, xpath) in METADATA_PATHS.items():
-        element = xml_root.xpath(xpath, namespaces=ISO_NAMESPACES)
-        value = element[0].text
+        element = getFirstElement(xml_root, xpath)
+        value = element.text
         metadata[key] = value
 
     # Add fields required by Zenodo
@@ -100,8 +101,18 @@ if iso_file != 'None':
 
     # Add optional metadata if it exists
     locations = get_spatial_locations(xml_root)
+
+    # If True, only the first point location is uploaded to Zenodo
+    TRUNCATE_POINTS = True
+    if locations and TRUNCATE_POINTS:
+        locations = [locations[0]]
     if locations:
         metadata['locations'] = locations
+
+    dates = get_temporal_extents(xml_root)
+    #dates = None
+    if dates:
+        metadata['dates'] = dates
 
     # Provide verbose feedback on the command line
     metadata_pretty = json.dumps(metadata, indent=4)

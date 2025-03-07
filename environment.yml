@@ -1,7 +1,8 @@
-name: dset2iso
+name: data-tools
 channels:
 - conda-forge
 dependencies:
+- python == 3.8
 - urllib3
 - lxml >= 4.2.1
 - requests
