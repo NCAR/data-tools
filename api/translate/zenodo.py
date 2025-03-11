@@ -1,6 +1,7 @@
+import datetime
 
-import json
-from api.util.xml import getXMLTree, getElementText, ISO_NAMESPACES
+from api.util.xml import getElements, getFirstElement
+
 
 Person_ISO_to_Zenodo = {
     'individualName': 'name',
@@ -26,16 +27,16 @@ parentXPaths = {
     'fileIdentifier'   : '/gmd:MD_Metadata/gmd:fileIdentifier/gco:CharacterString',
     'assetType'        : '/gmd:MD_Metadata/gmd:hierarchyLevel/gmd:MD_ScopeCode',
     'metadataContact'  : '/gmd:MD_Metadata/gmd:contact/gmd:CI_ResponsibleParty',
-    'metadataDate'     : '/gmd:MD_Metadata/gmd:dateStamp/gco:DateTime',
     'landingPage'      : '/gmd:MD_Metadata/gmd:dataSetURI/gco:CharacterString',
     'title'            : '/gmd:MD_Metadata/gmd:identificationInfo/gmd:MD_DataIdentification/gmd:citation/gmd:CI_Citation/gmd:title/gco:CharacterString',
     'publicationDate'  : '/gmd:MD_Metadata/gmd:identificationInfo/gmd:MD_DataIdentification/gmd:citation/gmd:CI_Citation/gmd:date/gmd:CI_Date/gmd:date/gco:Date',
     'citedContact'     : '/gmd:MD_Metadata/gmd:identificationInfo/gmd:MD_DataIdentification/gmd:citation/gmd:CI_Citation/gmd:citedResponsibleParty/gmd:CI_ResponsibleParty',
     'abstract'         : '/gmd:MD_Metadata/gmd:identificationInfo/gmd:MD_DataIdentification/gmd:abstract/gco:CharacterString',
     'supportContact'   : '/gmd:MD_Metadata/gmd:identificationInfo/gmd:MD_DataIdentification/gmd:pointOfContact',
-    'resourceType'     : '/gmd:MD_Metadata/gmd:identificationInfo/gmd:MD_DataIdentification/gmd:descriptiveKeywords/gmd:MD_Keywords/gmd:thesaurusName/gmd:CI_Citation/gmd:title/gco:CharacterString[contains(., "Resource Type")]/../../../../gmd:keyword/gco:CharacterString',
     'legalConstraints' : '/gmd:MD_Metadata/gmd:identificationInfo/gmd:MD_DataIdentification/gmd:resourceConstraints/gmd:MD_LegalConstraints/gmd:useLimitation/gco:CharacterString',
     'accessConstraints': '/gmd:MD_Metadata/gmd:identificationInfo/gmd:MD_DataIdentification/gmd:resourceConstraints/gmd:MD_LegalConstraints/gmd:otherConstraints/gco:CharacterString',
+    'geographicExtent' : '/gmd:MD_Metadata/gmd:identificationInfo/gmd:MD_DataIdentification/gmd:extent/gmd:EX_Extent/gmd:geographicElement/gmd:EX_GeographicBoundingBox',
+    'temporalExtent':    '/gmd:MD_Metadata/gmd:identificationInfo/gmd:MD_DataIdentification/gmd:extent/gmd:EX_Extent/gmd:temporalElement/gmd:EX_TemporalExtent/gmd:extent',
 }
 
 childXPaths = {
@@ -56,9 +57,10 @@ childXPaths = {
     'description':     'gmd:description/gco:CharacterString',
     'extentBegin':     'gml:TimePeriod/gml:beginPosition',
     'extentEnd':       'gml:TimePeriod/gml:endPosition',
-    'initiativeType':  'gmd:MD_AggregateInformation/gmd:initiativeType/gmd:DS_InitiativeTypeCode',
-    'collectionID':    'gmd:MD_AggregateInformation/gmd:aggregateDataSetName/gmd:CI_Citation/gmd:identifier/gmd:MD_Identifier/gmd:code/gco:CharacterString',
-    'collectionTitle': 'gmd:MD_AggregateInformation/gmd:aggregateDataSetName/gmd:CI_Citation/gmd:title/gco:CharacterString',
+    'westLon':         'gmd:westBoundLongitude/gco:Decimal',
+    'eastLon':         'gmd:eastBoundLongitude/gco:Decimal',
+    'southLat':        'gmd:southBoundLatitude/gco:Decimal',
+    'northLat':        'gmd:northBoundLatitude/gco:Decimal',
 }
 
 #
@@ -97,6 +99,52 @@ def extract_metadata(iso_file):
     metadata_pretty = json.dumps(metadata, indent=4)
     print(f'metadata = {metadata_pretty}')
     return metadata
+
+def get_spatial_locations(xml_tree):
+    """
+    Zenodo only supports a list of points for their spatial extent metadata.
+    In contrast, Bounding box is the only spatial representation type supported by GDEX.
+    Grab and return in a dictionary format supported by Zenodo.
+    """
+    locations = []
+    geoExtents = getElements(xml_tree, parentXPaths['geographicExtent'])
+    for geoExtent in geoExtents:
+        westLon = getFirstElement(geoExtent, childXPaths['westLon']).text
+        eastLon = getFirstElement(geoExtent, childXPaths['eastLon']).text
+        southLat = getFirstElement(geoExtent, childXPaths['southLat']).text
+        northLat = getFirstElement(geoExtent, childXPaths['northLat']).text
+        if westLon == eastLon and southLat == northLat:
+            location = {'lat': float(southLat), 'lon': float(westLon), 'place': 'Missing Name'}
+            locations.append(location)
+        else:
+            print('    (skipping non-point geographic extent...)')
+
+    return locations
+
+def truncate_iso_date(dateString):
+    """ Return an ISO date string without hours, minutes, seconds.
+    """
+    if 'T' in dateString:
+        dateString = dateString.split('T')[0]
+    return dateString
+
+def get_temporal_extents(xml_tree):
+    """
+    Zenodo supports only ISO date strings, so replace any occurrence of "now" with today's date.
+    """
+    dates = []
+    dateRanges = getElements(xml_tree, parentXPaths['temporalExtent'])
+    for dateRange in dateRanges:
+        rangeBegin = getFirstElement(dateRange, childXPaths['extentBegin']).text
+        rangeEnd = getFirstElement(dateRange, childXPaths['extentEnd']).text
+        if rangeBegin and rangeEnd:
+            if rangeEnd.lower() == 'now':
+                rangeEnd = datetime.datetime.now().isoformat()
+            rangeBegin = truncate_iso_date(rangeBegin)
+            rangeEnd = truncate_iso_date(rangeEnd)
+            date = {'start': rangeBegin, 'end': rangeEnd, 'type': 'Valid'}
+            dates.append(date)
+    return dates
 
 
 def getElementsMatchingRole(roleString, contactXPath, roleCodeXPath, xml_tree):

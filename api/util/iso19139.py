@@ -40,30 +40,30 @@ childXPaths =  {
 
 def modifyOnlineResource(resourceElement, url, name='', description=''):
     """ Modify contents of an "onLineResource" ISO element """
-    elementURL = xml.getElement(resourceElement, childXPaths['linkage'])
+    elementURL = xml.getFirstElement(resourceElement, childXPaths['linkage'])
     xml.setTextOrMarkMissing(elementURL, url)
 
-    elementName = xml.getElement(resourceElement, childXPaths['name'])
+    elementName = xml.getFirstElement(resourceElement, childXPaths['name'])
     xml.setTextOrMarkMissing(elementName, name)
 
-    elementDescription = xml.getElement(resourceElement, childXPaths['description'])
+    elementDescription = xml.getFirstElement(resourceElement, childXPaths['description'])
     xml.setTextOrMarkMissing(elementDescription, description)
 
 
 def modifyBoundingBox(xml_root, bboxXPath, bboxRecord):
     """ Modify contents of a "geographic bounding box" ISO element """
-    bboxElement = xml.getElement(xml_root, bboxXPath)
+    bboxElement = xml.getFirstElement(xml_root, bboxXPath)
 
-    elementWest = xml.getElement(bboxElement, childXPaths['westLong'])
+    elementWest = xml.getFirstElement(bboxElement, childXPaths['westLong'])
     xml.setTextOrMarkMissing(elementWest, bboxRecord['west'])
 
-    elementEast = xml.getElement(bboxElement, childXPaths['eastLong'])
+    elementEast = xml.getFirstElement(bboxElement, childXPaths['eastLong'])
     xml.setTextOrMarkMissing(elementEast, bboxRecord['east'])
 
-    elementNorth = xml.getElement(bboxElement, childXPaths['northLat'])
+    elementNorth = xml.getFirstElement(bboxElement, childXPaths['northLat'])
     xml.setTextOrMarkMissing(elementNorth, bboxRecord['north'])
 
-    elementSouth = xml.getElement(bboxElement, childXPaths['southLat'])
+    elementSouth = xml.getFirstElement(bboxElement, childXPaths['southLat'])
     xml.setTextOrMarkMissing(elementSouth, bboxRecord['south'])
 
 
@@ -71,13 +71,13 @@ def modifyTemporalExtent(xml_root, extentXPath, extentRecord):
     """ Modify contents of a "temporal extent" ISO element."""
     indeterminatePositions = {'before', 'after', 'now', 'unknown'}
 
-    extentElement = xml.getElement(xml_root, extentXPath)
-    elementBegin = xml.getElement(extentElement, childXPaths['extentBegin'])
+    extentElement = xml.getFirstElement(xml_root, extentXPath)
+    elementBegin = xml.getFirstElement(extentElement, childXPaths['extentBegin'])
     xml.setTextOrMarkMissing(elementBegin, extentRecord['start'])
     if extentRecord['start'] in indeterminatePositions:
         elementBegin.attrib['indeterminatePosition'] = extentRecord['start']
 
-    elementEnd = xml.getElement(extentElement, childXPaths['extentEnd'])
+    elementEnd = xml.getFirstElement(extentElement, childXPaths['extentEnd'])
     xml.setTextOrMarkMissing(elementEnd, extentRecord['end'])
     if extentRecord['end'] in indeterminatePositions:
         elementEnd.attrib['indeterminatePosition'] = extentRecord['end']
@@ -92,23 +92,23 @@ def modifyContactData(contactElement, contactData, impliedRoleValue = None):
         contactData['role'] = impliedRoleValue
 
     nameValue = contactData.get('name', "")
-    element = xml.getElement(contactElement, childXPaths['individual'])
+    element = xml.getFirstElement(contactElement, childXPaths['individual'])
     xml.setTextOrMarkMissing(element, nameValue)
 
     positionValue = contactData.get('position', "")
-    element = xml.getElement(contactElement, childXPaths['position'])
+    element = xml.getFirstElement(contactElement, childXPaths['position'])
     xml.setTextOrMarkMissing(element, positionValue)
 
     organizationValue = contactData.get('organization', "")
-    element = xml.getElement(contactElement, childXPaths['organization'])
+    element = xml.getFirstElement(contactElement, childXPaths['organization'])
     xml.setTextOrMarkMissing(element, organizationValue)
 
     emailValue = contactData.get('email', "")
-    element = xml.getElement(contactElement, childXPaths['email'])
+    element = xml.getFirstElement(contactElement, childXPaths['email'])
     xml.setTextOrMarkMissing(element, emailValue)
 
     roleValue = contactData.get('role', "")
-    element = xml.getElement(contactElement, childXPaths['roleCode'])
+    element = xml.getFirstElement(contactElement, childXPaths['roleCode'])
     xml.setTextOrMarkMissing(element, roleValue)
     element.attrib['codeListValue'] = roleValue
 
@@ -118,27 +118,27 @@ def modifyContactDataSelectively(contactElement, contactData):
         Only override XML values if fill values are given, so XML template values are unchanged. """
     nameValue = contactData.get('name', None)
     if nameValue:
-        element = xml.getElement(contactElement, childXPaths['individual'])
+        element = xml.getFirstElement(contactElement, childXPaths['individual'])
         xml.setTextOrMarkMissing(element, nameValue)
 
     positionValue = contactData.get('position', None)
     if positionValue:
-        element = xml.getElement(contactElement, childXPaths['position'])
+        element = xml.getFirstElement(contactElement, childXPaths['position'])
         xml.setTextOrMarkMissing(element, positionValue)
 
     organizationValue = contactData.get('organization', None)
     if organizationValue:
-        element = xml.getElement(contactElement, childXPaths['organization'])
+        element = xml.getFirstElement(contactElement, childXPaths['organization'])
         xml.setTextOrMarkMissing(element, organizationValue)
 
     emailValue = contactData.get('email', None)
     if emailValue:
-        element = xml.getElement(contactElement, childXPaths['email'])
+        element = xml.getFirstElement(contactElement, childXPaths['email'])
         xml.setTextOrMarkMissing(element, emailValue)
 
     roleValue = contactData.get('role', None)
     if roleValue:
-        element = xml.getElement(contactElement, childXPaths['roleCode'])
+        element = xml.getFirstElement(contactElement, childXPaths['roleCode'])
         xml.setTextOrMarkMissing(element, roleValue)
         element.attrib['codeListValue'] = roleValue
 
@@ -153,7 +153,7 @@ def addSpatialResolutionDistances(xml_root, resolutionXPath, resolutionList):
     resolutionElement, resolutionParent, elementIndex = xml.cutElement(xml_root, resolutionXPath, True)
     for resolution in resolutionList:
         elementCopy = xml.copyElement(resolutionElement)
-        distanceElement = xml.getElement(elementCopy, childXPaths['distance'])
+        distanceElement = xml.getFirstElement(elementCopy, childXPaths['distance'])
         xml.setTextOrMarkMissing(distanceElement, resolution['distance'])
         distanceElement.attrib['uom'] = resolution['units']
         # Insert element copies back into parent, in order of creation.
@@ -200,7 +200,7 @@ def addRelatedLinks(xml_root, relatedLinkXPath, relatedLinks):
     insertCounter = 0
     for link in relatedLinks:
         elementCopy = xml.copyElement(emptyLinkElement)
-        onlineResourceChild = xml.getElement(elementCopy, childXPaths['relatedLink'])
+        onlineResourceChild = xml.getFirstElement(elementCopy, childXPaths['relatedLink'])
         modifyOnlineResource(onlineResourceChild, link['linkage'], link['name'], link['description'])
         parent.insert(originalIndex + insertCounter, elementCopy)
         insertCounter += 1

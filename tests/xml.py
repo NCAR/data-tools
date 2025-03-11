@@ -49,7 +49,7 @@ class XML_Test(unittest.TestCase):
       xml_tree = addXPathToXML(xml_tree, "Child", '1')
       xml_tree = addXPathToXML(xml_tree, "Child", '2')
 
-      foundElement = xml.getElement(xml_tree, 'Child')
+      foundElement = xml.getFirstElement(xml_tree, 'Child')
       self.assertEqual(foundElement.text, '1')
 
 

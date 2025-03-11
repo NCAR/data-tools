@@ -50,10 +50,10 @@ class ISO19139_Test(unittest.TestCase):
       # Debug any XML changes this way:
       #print(ElementTree.tostring(xml_tree, pretty_print=True))
 
-      element = xml.getElement(xml_tree, iso.childXPaths['extentBegin'])
+      element = xml.getFirstElement(xml_tree, iso.childXPaths['extentBegin'])
       self.assertEqual(element.attrib['indeterminatePosition'], extentRecord['start'])
 
-      element = xml.getElement(xml_tree, iso.childXPaths['extentEnd'])
+      element = xml.getFirstElement(xml_tree, iso.childXPaths['extentEnd'])
       self.assertEqual(element.attrib['indeterminatePosition'], extentRecord['end'])
 
 
