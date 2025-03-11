@@ -3,7 +3,7 @@
 #
 
 import numbers
-from lxml import etree as ElementTree       # ISO XML parser
+from lxml import etree as element_tree      # ISO XML parser
 from copy import deepcopy                   # Allows deep copy of ISO elements
 
 # Debug
@@ -13,23 +13,36 @@ log = logging.getLogger(__name__)
 
 
 # We need XML namespace mappings in order to search the ISO element tree
-XML_NAMESPACE_MAP = {'gmd': 'http://www.isotc211.org/2005/gmd',
-                     'xlink': 'http://www.w3.org/1999/xlink', 
-                     'gco': 'http://www.isotc211.org/2005/gco', 
-                     'gml': 'http://www.opengis.net/gml'}
+ISO_NAMESPACES = {'gmd': 'http://www.isotc211.org/2005/gmd',
+                  'xlink': 'http://www.w3.org/1999/xlink',
+                  'gco': 'http://www.isotc211.org/2005/gco',
+                  'gml': 'http://www.opengis.net/gml'}
 
 #
 # Tree-wide operations
 #
 def getXMLTree(templateFilePath):
-    tree = ElementTree.parse(templateFilePath)
+    tree = element_tree.parse(templateFilePath)
     root = tree.getroot()
     return root
 
 
 def toString(xml_tree):
-    outputString = ElementTree.tostring(xml_tree, encoding='unicode', pretty_print=True)
+    outputString = element_tree.tostring(xml_tree, encoding='unicode', pretty_print=True)
     return outputString
+
+
+def getElementText(xpath, xml_root):
+    """
+    Return text from element; expected is that xpath contains gco:CharacterString.
+    """
+    assert ('gco:CharacterString' in xpath) or ('gco:Date' in xpath)
+    value = None
+    element = xml_root.xpath(xpath, namespaces=ISO_NAMESPACES)
+    if element:
+        value = element[0].text
+    return value
+
 
 #
 # XML Element Query operations
@@ -63,7 +76,6 @@ def getLast(someList):
     if someList:
         return someList[-1]
     return None
-
 
 
 def cutElement(baseElement, elementPath, returnIndex = False):

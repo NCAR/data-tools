@@ -1,20 +1,49 @@
-# dset-JSON-to-ISO19139
+# data-tools
 
-A collection of python command-line programs for examining or producing metadata records according to the ISO XML 19139:2005 standard. 
+A collection of python command-line programs for data upload, metadata translation, and metadata upload.
 
-There are three command-line utilities:
+These are the command-line utilities:
 
+* **zenodo_create.py** :  A program for uploading data files and metadata to Zenodo.  
 * **datacite2iso.py** : produce an ISO XML file from DOI published on the DataCite metadata service.
 * **dset2iso.py** : produce an ISO XML file from a JSON file containing elements from the NCAR DSET Metadata Dialect, version 12.
 * **xpath.py** :  print text values for a given XML element in an ISO record or group of records.
 
-These utilities require python 3 and the python 'lxml' library (version 3.6 or greater).
+These utilities require python 3, and the python 'lxml' and 'requests' library.  Use the provided conda or pip environment files to create a usable python environment.
 
 ## Installation Instructions
 
 See [INSTALL.md](./INSTALL.md) for instructions on how to install these commands in a user environment. 
 
 ## Command-Line Usage 
+
+
+### zenodo_create.py
+
+A program for uploading files to Zenodo.  
+
+An API token for Zenodo is required.  Before running the program, set the API token value as follows:
+
+       export ZENODO_TOKEN='<my_token>'
+ 
+Also required is a path to a folder with files to upload.  All files in the folder and its sub-folders 
+will be uploaded.  If the upload folder contains spaces, then surround the path in single quotes.
+
+Example usage:
+
+       python zenodo_create.py --folder <local_folder_with_files>
+
+Optional arguments:
+
+       --iso_file <iso_file_path>    Extract and upload metadata from ISO XML file. 
+       --resume <resume_file_path>   Resume uploading to a recently created dataset using an automatically generated 
+                                     resume file; default location is /tmp/resume_upload_<dataset_id>.json .
+       --publish                     After upload, publish the dataset.
+       --test                        Upload to Zenodo's sandbox server instead; requires a sandbox API token.
+       --version                     Print the program version and exit.
+       --help                        Print the program description and exit.
+
+Tested with python 3.8.
 
 
 ### datacite2iso.py

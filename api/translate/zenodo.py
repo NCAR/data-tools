@@ -2,6 +2,7 @@ import datetime
 
 from api.util.xml import getElements, getFirstElement
 
+
 Person_ISO_to_Zenodo = {
     'individualName': 'name',
     'organisationName' : 'affiliation',
@@ -62,10 +63,42 @@ childXPaths = {
     'northLat':        'gmd:northBoundLatitude/gco:Decimal',
 }
 
-ISO_NAMESPACES = {'gmd': 'http://www.isotc211.org/2005/gmd',
-                  'xlink': 'http://www.w3.org/1999/xlink',
-                  'gco': 'http://www.isotc211.org/2005/gco',
-                  'gml': 'http://www.opengis.net/gml'}
+#
+#  ISO File Metadata Mappings for Zenodo
+#
+
+METADATA_PATHS = {
+    'title'            : '/gmd:MD_Metadata/gmd:identificationInfo/gmd:MD_DataIdentification/gmd:citation/gmd:CI_Citation/gmd:title/gco:CharacterString',
+    'description'      : '/gmd:MD_Metadata/gmd:identificationInfo/gmd:MD_DataIdentification/gmd:abstract/gco:CharacterString',
+}
+
+def extract_metadata(iso_file):
+    """
+    Parse ISO XML file and pull metadata for Zenodo upload.
+    """
+    metadata = {}
+    xml_root = getXMLTree(iso_file)
+    for (key, xpath) in METADATA_PATHS.items():
+        value = getElementText(xpath, xml_root)
+        metadata[key] = value
+
+    # Add fields required by Zenodo
+    authors_json = get_creators_as_json(xml_root)
+    metadata['creators'] = authors_json
+    metadata['upload_type'] = 'dataset'
+
+    # Add DOI if it exists already
+    doi_string = get_DOI(xml_root)
+    if doi_string:
+        metadata['doi'] = doi_string
+
+    # Add publication date
+    date_string = get_publication_date(xml_root)
+    if date_string:
+        metadata['publication_date'] = date_string
+    metadata_pretty = json.dumps(metadata, indent=4)
+    print(f'metadata = {metadata_pretty}')
+    return metadata
 
 def get_spatial_locations(xml_tree):
     """
@@ -128,8 +161,6 @@ def getElementsMatchingRole(roleString, contactXPath, roleCodeXPath, xml_tree):
 
     return matchingContactElements
 
-
-
 def getRoleMatchesAsJson(roleString, contactXPath, roleCodeXPath, xml_tree):
     """
     Return a dictionary of creators/contributors matching a specific role found at the given contact XPath.
@@ -158,8 +189,6 @@ def getRoleMatchesAsJson(roleString, contactXPath, roleCodeXPath, xml_tree):
 
     return foundPeople
 
-
-
 def get_lastname_firstname(name_string):
     """
     This function takes a person's full name, and if it has one whitespace separating two words and no commas,
@@ -174,7 +203,6 @@ def get_lastname_firstname(name_string):
         return_value = "%s, %s" % (words[1], words[0])
     return return_value
 
-
 def get_creators_as_json(xml_tree):
     """
     Searches an ISO XML element tree for authors and returns a JSON description of them according to Zenodo's
@@ -183,3 +211,33 @@ def get_creators_as_json(xml_tree):
     authorJson = getRoleMatchesAsJson('author', parentXPaths['citedContact'], childXPaths['roleCode'], xml_tree)
     return authorJson
 
+
+def is_DOI(urlString):
+    """  Returns True if urlString appears to be a DOI.  Otherwise, it returns False.
+    """
+    is_doi = False
+    if urlString:
+       if urlString.startswith('http://doi.org/') or urlString.startswith('https://doi.org/'):
+          is_doi = True
+    return is_doi
+
+
+def get_DOI(xml_tree):
+    """
+    If required landing page is a DOI, return it as a string.  Otherwise, return None.
+    """
+    doi_string = None
+    xpath = parentXPaths['landingPage']
+    landing_page = getElementText(xpath, xml_tree)
+    if is_DOI(landing_page):
+        doi_string = landing_page
+    return doi_string
+
+def get_publication_date(xml_tree):
+    """
+    Extract ISO 8601 date and make sure timestamp is removed.
+    """
+    date_string = getElementText(parentXPaths['publicationDate'], xml_tree)
+    if 'T' in date_string:
+        date_string = date_string.split('T')[0]
+    return date_string

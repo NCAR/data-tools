@@ -8,6 +8,7 @@ from lxml import etree as ElementTree       # ISO XML parser
 from api.translate.zenodo import get_creators_as_json, get_spatial_locations, get_temporal_extents, ISO_NAMESPACES
 from api.util.xml import getFirstElement
 
+
 PROGRAM_DESCRIPTION = '''
 
 A program for uploading files to Zenodo.  
@@ -25,10 +26,11 @@ Example usage:
 
 Optional arguments:
 
-       --iso_file <iso_file_path>    Path to ISO XML Metadata file for metadata extraction and upload
+       --iso_file <iso_file_path>    Extract and upload metadata from ISO XML file. 
        --resume <resume_file_path>   Resume uploading to a recently created dataset using an automatically generated 
-                                     resume file; default location is /tmp/resume_upload_<dataset_id>.json
-       --test                        Upload to Zenodo's sandbox server instead; requires a separate API TOKEN
+                                     resume file; default location is /tmp/resume_upload_<dataset_id>.json .
+       --publish                     After upload, publish the dataset.
+       --test                        Upload to Zenodo's sandbox server instead; requires a sandbox API token.
        --version                     Print the program version and exit.
        --help                        Print the program description and exit.
 
@@ -41,29 +43,14 @@ __version__ = '-'.join(__version_info__)
 
 
 #
-#  ISO File Metadata Mappings for Zenodo
-#
-
-METADATA_PATHS = {
-    'title'            : '/gmd:MD_Metadata/gmd:identificationInfo/gmd:MD_DataIdentification/gmd:citation/gmd:CI_Citation/gmd:title/gco:CharacterString',
-    'description'      : '/gmd:MD_Metadata/gmd:identificationInfo/gmd:MD_DataIdentification/gmd:abstract/gco:CharacterString',
-}
-
-
-
-def getXMLTree(iso_file_path):
-    tree = ElementTree.parse(iso_file_path)
-    root = tree.getroot()
-    return root
-
-#
 #  Parse the command line options.
 #
 
 programHelp = PROGRAM_DESCRIPTION + __version__
 parser = argparse.ArgumentParser(description=programHelp)
 parser.add_argument("--test", help="Upload to Zenodo Sandbox server", action='store_const', const=True)
-parser.add_argument("--resume_file", nargs=1, help="Resume uploading configuration file", default=['None'])
+parser.add_argument("--publish", help="Publish dataset after upload", action='store_const', const=True)
+parser.add_argument("--resume_file", nargs=1, help="Resume uploading using dataset resume file", default=['None'])
 parser.add_argument("--iso_file", nargs=1, help="Path to ISO XML Metadata file", default=['None'])
 parser.add_argument('--version', action='version', version="%(prog)s (" + __version__ + ")")
 
@@ -76,6 +63,7 @@ upload_folder = args.folder[0]
 iso_file = args.iso_file[0]
 resume_file = args.resume_file[0]
 TEST_UPLOAD = args.test
+PUBLISH = args.publish
 
 # Check validity of upload folder path, resume file path, iso_file path
 assert(os.path.isdir(upload_folder))
@@ -226,8 +214,7 @@ if metadata:
         exit(r.status_code)
 
 
-TEST_PUBLISH = False
-if TEST_PUBLISH:
+if PUBLISH:
     r = requests.post(upload_url + '/%s/actions/publish' % dataset_id, params=params)
     print(f'\nPublish status code: {r.status_code}')
 
