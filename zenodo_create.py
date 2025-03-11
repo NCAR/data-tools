@@ -4,9 +4,8 @@ import requests
 import argparse
 import os
 import json
-from lxml import etree as ElementTree       # ISO XML parser
-from api.translate.zenodo import get_creators_as_json, get_spatial_locations, get_temporal_extents, ISO_NAMESPACES
-from api.util.xml import getFirstElement
+
+from api.translate.zenodo import extract_metadata
 
 
 PROGRAM_DESCRIPTION = '''
@@ -75,32 +74,9 @@ metadata = {}
 if iso_file != 'None':
     assert(os.path.isfile(iso_file))
 
-    # Parse ISO XML file and pull metadata according to METADATA_PATHS
-    xml_root = getXMLTree(iso_file)
-    for (key, xpath) in METADATA_PATHS.items():
-        element = getFirstElement(xml_root, xpath)
-        value = element.text
-        metadata[key] = value
+    metadata = extract_metadata(iso_file)
 
-    # Add fields required by Zenodo
-    authors_json = get_creators_as_json(xml_root)
-    metadata['creators'] = authors_json
-    metadata['upload_type'] = 'dataset'
 
-    # Add optional metadata if it exists
-    locations = get_spatial_locations(xml_root)
-
-    # If True, only the first point location is uploaded to Zenodo
-    TRUNCATE_POINTS = True
-    if locations and TRUNCATE_POINTS:
-        locations = [locations[0]]
-    if locations:
-        metadata['locations'] = locations
-
-    dates = get_temporal_extents(xml_root)
-    #dates = None
-    if dates:
-        metadata['dates'] = dates
 
     # Provide verbose feedback on the command line
     metadata_pretty = json.dumps(metadata, indent=4)

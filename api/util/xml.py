@@ -49,7 +49,7 @@ def getElementText(xpath, xml_root):
 #
 def getElements(baseElement, elementPath):
     """ Search XML element tree and return all matching elements """
-    elements = baseElement.xpath(elementPath, namespaces=XML_NAMESPACE_MAP)
+    elements = baseElement.xpath(elementPath, namespaces=ISO_NAMESPACES)
     assert elements != None
     return elements
 

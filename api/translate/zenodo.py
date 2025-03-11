@@ -1,6 +1,6 @@
 import datetime
 
-from api.util.xml import getElements, getFirstElement
+from api.util.xml import getElements, getFirstElement, getXMLTree, getElementText, ISO_NAMESPACES
 
 
 Person_ISO_to_Zenodo = {
@@ -96,8 +96,26 @@ def extract_metadata(iso_file):
     date_string = get_publication_date(xml_root)
     if date_string:
         metadata['publication_date'] = date_string
-    metadata_pretty = json.dumps(metadata, indent=4)
-    print(f'metadata = {metadata_pretty}')
+
+    # Add fields required by Zenodo
+    authors_json = get_creators_as_json(xml_root)
+    metadata['creators'] = authors_json
+    metadata['upload_type'] = 'dataset'
+
+    # Add optional metadata if it exists
+    locations = get_spatial_locations(xml_root)
+
+    # If True, only the first point location is uploaded to Zenodo
+    TRUNCATE_POINTS = True
+    if locations and TRUNCATE_POINTS:
+        locations = [locations[0]]
+    if locations:
+        metadata['locations'] = locations
+
+    dates = get_temporal_extents(xml_root)
+    #dates = None
+    if dates:
+        metadata['dates'] = dates
     return metadata
 
 def get_spatial_locations(xml_tree):
@@ -166,12 +184,8 @@ def getRoleMatchesAsJson(roleString, contactXPath, roleCodeXPath, xml_tree):
     Return a dictionary of creators/contributors matching a specific role found at the given contact XPath.
     """
     foundPeople = []
-
     matchingContactElements = getElementsMatchingRole(roleString, contactXPath, roleCodeXPath, xml_tree)
-
-    # Map 'individualName' to 'name', 'organizationName to
     for contactElement in matchingContactElements:
-
         zenodo_person = {}
         for (iso_name, zen_name) in Person_ISO_to_Zenodo.items():
 
@@ -220,7 +234,6 @@ def is_DOI(urlString):
        if urlString.startswith('http://doi.org/') or urlString.startswith('https://doi.org/'):
           is_doi = True
     return is_doi
-
 
 def get_DOI(xml_tree):
     """
