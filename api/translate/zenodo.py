@@ -37,6 +37,7 @@ parentXPaths = {
     'accessConstraints': '/gmd:MD_Metadata/gmd:identificationInfo/gmd:MD_DataIdentification/gmd:resourceConstraints/gmd:MD_LegalConstraints/gmd:otherConstraints/gco:CharacterString',
     'geographicExtent' : '/gmd:MD_Metadata/gmd:identificationInfo/gmd:MD_DataIdentification/gmd:extent/gmd:EX_Extent/gmd:geographicElement/gmd:EX_GeographicBoundingBox',
     'temporalExtent':    '/gmd:MD_Metadata/gmd:identificationInfo/gmd:MD_DataIdentification/gmd:extent/gmd:EX_Extent/gmd:temporalElement/gmd:EX_TemporalExtent/gmd:extent',
+    'spatialResolution': '/gmd:MD_Metadata/gmd:identificationInfo/gmd:MD_DataIdentification/gmd:spatialResolution/gmd:MD_Resolution/gmd:distance/gco:Distance',
 }
 
 childXPaths = {
@@ -83,9 +84,13 @@ def extract_metadata(iso_file):
         metadata[key] = value
 
     # Add fields required by Zenodo
+    #
     authors_json = get_creators_as_json(xml_root)
     metadata['creators'] = authors_json
     metadata['upload_type'] = 'dataset'
+
+    # Add optional metadata if it exists
+    #
 
     # Add DOI if it exists already
     doi_string = get_DOI(xml_root)
@@ -97,34 +102,33 @@ def extract_metadata(iso_file):
     if date_string:
         metadata['publication_date'] = date_string
 
-    # Add fields required by Zenodo
-    authors_json = get_creators_as_json(xml_root)
-    metadata['creators'] = authors_json
-    metadata['upload_type'] = 'dataset'
-
-    # Add optional metadata if it exists
-    locations = get_spatial_locations(xml_root)
+    (point_locations, location_notes) = get_spatial_info(xml_root)
 
     # If True, only the first point location is uploaded to Zenodo
     TRUNCATE_POINTS = True
-    if locations and TRUNCATE_POINTS:
-        locations = [locations[0]]
-    if locations:
-        metadata['locations'] = locations
+    if point_locations and TRUNCATE_POINTS:
+        point_locations = [point_locations[0]]
+    if point_locations:
+        metadata['locations'] = point_locations
 
-    dates = get_temporal_extents(xml_root)
-    #dates = None
-    if dates:
-        metadata['dates'] = dates
+    (date_ranges, temporal_notes) = get_temporal_info(xml_root)
+    if date_ranges:
+        metadata['dates'] = date_ranges
+
+    resolution_notes = get_spatial_resolutions(xml_root)
+    notes = location_notes + temporal_notes + resolution_notes
+    if notes:
+        metadata['notes'] = notes
     return metadata
 
-def get_spatial_locations(xml_tree):
+def get_spatial_info(xml_tree):
     """
     Zenodo only supports a list of points for their spatial extent metadata.
     In contrast, Bounding box is the only spatial representation type supported by GDEX.
     Grab and return in a dictionary format supported by Zenodo.
     """
     locations = []
+    notes = ''
     geoExtents = getElements(xml_tree, parentXPaths['geographicExtent'])
     for geoExtent in geoExtents:
         westLon = getFirstElement(geoExtent, childXPaths['westLon']).text
@@ -134,10 +138,20 @@ def get_spatial_locations(xml_tree):
         if westLon == eastLon and southLat == northLat:
             location = {'lat': float(southLat), 'lon': float(westLon), 'place': 'Missing Name'}
             locations.append(location)
-        else:
-            print('    (skipping non-point geographic extent...)')
+        notes = notes + (f' Longitude West Boundary: {westLon}<br> Longitude East Boundary: {eastLon}<br>' +
+                         f' Latitude South Boundary: {southLat}<br> Latitude North Boundary: {northLat}<br><br>')
 
-    return locations
+    return locations, notes
+
+def get_spatial_resolutions(xml_tree):
+    """ Return a description of spatial resolutions in the XML tree """
+    resolutions = ''
+    resolution_elements = getElements(xml_tree, parentXPaths['spatialResolution'])
+    for element in resolution_elements:
+        resolution_value = element.text
+        resolution_units = element.get('uom')
+        resolutions = resolutions + f' Spatial Resolution: {resolution_value} {resolution_units}<br><br>'
+    return resolutions
 
 def truncate_iso_date(dateString):
     """ Return an ISO date string without hours, minutes, seconds.
@@ -146,11 +160,12 @@ def truncate_iso_date(dateString):
         dateString = dateString.split('T')[0]
     return dateString
 
-def get_temporal_extents(xml_tree):
+def get_temporal_info(xml_tree):
     """
     Zenodo supports only ISO date strings, so replace any occurrence of "now" with today's date.
     """
     dates = []
+    notes = ''
     dateRanges = getElements(xml_tree, parentXPaths['temporalExtent'])
     for dateRange in dateRanges:
         rangeBegin = getFirstElement(dateRange, childXPaths['extentBegin']).text
@@ -162,7 +177,7 @@ def get_temporal_extents(xml_tree):
             rangeEnd = truncate_iso_date(rangeEnd)
             date = {'start': rangeBegin, 'end': rangeEnd, 'type': 'Valid'}
             dates.append(date)
-    return dates
+    return dates, notes
 
 
 def getElementsMatchingRole(roleString, contactXPath, roleCodeXPath, xml_tree):
@@ -196,7 +211,7 @@ def getRoleMatchesAsJson(roleString, contactXPath, roleCodeXPath, xml_tree):
             foundText = contactElement.findtext(childXPath, namespaces=ISO_NAMESPACES)
 
             # For individual names, try transforming to "LastName, FirstName" format
-            if zen_name == 'name' and get_lastname_firstname(foundText):
+            if zen_name == 'name' and foundText and get_lastname_firstname(foundText):
                 foundText = get_lastname_firstname(foundText)
             zenodo_person[zen_name] = foundText
         foundPeople.append(zenodo_person)
