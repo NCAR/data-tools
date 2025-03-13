@@ -5,6 +5,7 @@ from api.util.xml import getElements, getFirstElement, getXMLTree, getElementTex
 
 Person_ISO_to_Zenodo = {
     'individualName': 'name',
+    'individualAnchor': 'name',
     'organisationName' : 'affiliation',
     'roleCode': 'type'
 }
@@ -41,6 +42,7 @@ parentXPaths = {
 
 childXPaths = {
     'individualName':      'gmd:individualName/gco:CharacterString',
+    'individualAnchor':    'gmd:individualName/gmx:Anchor',
     'organisationName':    'gmd:organisationName/gco:CharacterString',
     'position':        'gmd:positionName/gco:CharacterString',
     'email':           'gmd:contactInfo/gmd:CI_Contact/gmd:address/gmd:CI_Address/gmd:electronicMailAddress/gco:CharacterString',
@@ -179,6 +181,7 @@ def getElementsMatchingRole(roleString, contactXPath, roleCodeXPath, xml_tree):
 
     return matchingContactElements
 
+
 def getRoleMatchesAsJson(roleString, contactXPath, roleCodeXPath, xml_tree):
     """
     Return a dictionary of creators/contributors matching a specific role found at the given contact XPath.
@@ -195,27 +198,50 @@ def getRoleMatchesAsJson(roleString, contactXPath, roleCodeXPath, xml_tree):
             childXPath = childXPaths[iso_name]
             foundText = contactElement.findtext(childXPath, namespaces=ISO_NAMESPACES)
 
+            # Grab the ORCID value if it exists
+            if iso_name == 'individualAnchor' and foundText:
+                orcid_id = extract_orcid(contactElement)
+                zenodo_person['orcid'] = orcid_id
+
             # For individual names, try transforming to "LastName, FirstName" format
-            if zen_name == 'name' and get_lastname_firstname(foundText):
+            if zen_name == 'name' and foundText and get_lastname_firstname(foundText):
                 foundText = get_lastname_firstname(foundText)
-            zenodo_person[zen_name] = foundText
+            if foundText:
+                zenodo_person[zen_name] = foundText
         foundPeople.append(zenodo_person)
 
     return foundPeople
 
+
+def extract_orcid(contactElement):
+    """ Extract and return the ORCID identifier from a CitedContact element. """
+    anchorElement = contactElement.xpath(childXPaths['individualAnchor'], namespaces=ISO_NAMESPACES)
+    orcid_url = anchorElement[0].get('{http://www.w3.org/1999/xlink}href')
+    orcid_id = orcid_url.split('/')[-1]
+    return orcid_id
+
+
 def get_lastname_firstname(name_string):
     """
     This function takes a person's full name, and if it has one whitespace separating two words and no commas,
-    e.g. "John Doe", it returns a modified version of name_string, of the form "Doe, John".
+    e.g. "John Doe", it returns a modified version of name_string, of the form "Doe, John".  If the full name
+    has three words, no commas, and the middle word is in the form of a middle initial, e.g. "Jane L. Plain",
+    then return "Plain, Jane L.".
 
-    If the name string does not have the form "word1 word2", the function returns None.
+    If the word string has a comma or otherwise does not match the above formats, the function returns None.
     """
     return_value = None
     words = name_string.split()
     no_comma = ',' not in name_string
-    if len(words) == 2 and no_comma:
-        return_value = "%s, %s" % (words[1], words[0])
+    if no_comma and len(words) == 2 :
+        return_value = f"{words[1]}, {words[0]}"
+    elif no_comma and len(words) == 3 and is_middle_initial(words[1]):
+        return_value = f"{words[2]}, {words[0]} {words[1]}"
     return return_value
+
+def is_middle_initial(word_string):
+    is_mi = len(word_string) == 2 and word_string[-1] == '.'
+    return is_mi
 
 def get_creators_as_json(xml_tree):
     """
