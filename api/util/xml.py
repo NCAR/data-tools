@@ -16,6 +16,7 @@ log = logging.getLogger(__name__)
 ISO_NAMESPACES = {'gmd': 'http://www.isotc211.org/2005/gmd',
                   'xlink': 'http://www.w3.org/1999/xlink',
                   'gco': 'http://www.isotc211.org/2005/gco',
+                  'gmx': 'http://www.isotc211.org/2005/gmx',
                   'gml': 'http://www.opengis.net/gml'}
 
 #

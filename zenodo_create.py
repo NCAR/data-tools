@@ -73,11 +73,7 @@ if resume_file != 'None':
 metadata = {}
 if iso_file != 'None':
     assert(os.path.isfile(iso_file))
-
     metadata = extract_metadata(iso_file)
-
-
-
     # Provide verbose feedback on the command line
     metadata_pretty = json.dumps(metadata, indent=4)
     print(f'metadata = {metadata_pretty}')
