@@ -230,9 +230,17 @@ def get_lastname_firstname(name_string):
     return_value = None
     words = name_string.split()
     no_comma = ',' not in name_string
-    if len(words) == 2 and no_comma:
+    if no_comma and len(words) == 2:
         return_value = "%s, %s" % (words[1], words[0])
+    elif no_comma and len(words) == 3 and is_middle_initial(words[1]):
+        return_value = f"{words[2]}, {words[0]} {words[1]}"
     return return_value
+
+
+def is_middle_initial(word_string):
+    is_mi = len(word_string) == 2 and word_string[-1] == '.'
+    return is_mi
+
 
 def get_creators_as_json(xml_tree):
     """
