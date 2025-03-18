@@ -171,6 +171,8 @@ def get_temporal_info(xml_tree):
         rangeBegin = getFirstElement(dateRange, childXPaths['extentBegin']).text
         rangeEnd = getFirstElement(dateRange, childXPaths['extentEnd']).text
         if rangeBegin and rangeEnd:
+            notes = notes + (f' Temporal Range Start: {rangeBegin}<br>' +
+                             f' Temporal Range End: {rangeEnd}<br><br>')
             if rangeEnd.lower() == 'now':
                 rangeEnd = datetime.datetime.now().isoformat()
             rangeBegin = truncate_iso_date(rangeBegin)
