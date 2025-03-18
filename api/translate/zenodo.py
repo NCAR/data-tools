@@ -74,8 +74,7 @@ METADATA_PATHS = {
 }
 
 def extract_metadata(iso_file):
-    """
-    Parse ISO XML file and pull metadata for Zenodo upload.
+    """ Parse ISO XML file and pull metadata for Zenodo upload.
     """
     metadata = {}
     xml_root = getXMLTree(iso_file)
@@ -123,7 +122,7 @@ def extract_metadata(iso_file):
 
 def get_spatial_info(xml_tree):
     """
-    Zenodo only supports a list of points for their spatial extent metadata.
+    Zenodo only supports a list of points and descriptions for their spatial extent metadata.
     In contrast, Bounding box is the only spatial representation type supported by GDEX.
     Grab and return in a dictionary format supported by Zenodo.
     """
@@ -140,7 +139,6 @@ def get_spatial_info(xml_tree):
             locations.append(location)
         notes = notes + (f' Longitude West Boundary: {westLon}<br> Longitude East Boundary: {eastLon}<br>' +
                          f' Latitude South Boundary: {southLat}<br> Latitude North Boundary: {northLat}<br><br>')
-
     return locations, notes
 
 def get_spatial_resolutions(xml_tree):
@@ -150,7 +148,9 @@ def get_spatial_resolutions(xml_tree):
     for element in resolution_elements:
         resolution_value = element.text
         resolution_units = element.get('uom')
-        resolutions = resolutions + f' Spatial Resolution: {resolution_value} {resolution_units}<br><br>'
+        resolutions = resolutions + f' Spatial Resolution: {resolution_value} {resolution_units}<br>'
+    if resolutions:
+        resolutions = resolutions + '<br>'
     return resolutions
 
 def truncate_iso_date(dateString):
@@ -161,8 +161,7 @@ def truncate_iso_date(dateString):
     return dateString
 
 def get_temporal_info(xml_tree):
-    """
-    Zenodo supports only ISO date strings, so replace any occurrence of "now" with today's date.
+    """ Zenodo supports only ISO date strings, so replace any occurrence of "now" with today's date.
     """
     dates = []
     notes = ''
@@ -197,8 +196,7 @@ def getElementsMatchingRole(roleString, contactXPath, roleCodeXPath, xml_tree):
     return matchingContactElements
 
 def getRoleMatchesAsJson(roleString, contactXPath, roleCodeXPath, xml_tree):
-    """
-    Return a dictionary of creators/contributors matching a specific role found at the given contact XPath.
+    """ Return a dictionary of creators/contributors matching a specific role found at the given contact XPath.
     """
     foundPeople = []
     matchingContactElements = getElementsMatchingRole(roleString, contactXPath, roleCodeXPath, xml_tree)
@@ -261,8 +259,7 @@ def is_DOI(urlString):
     return is_doi
 
 def get_DOI(xml_tree):
-    """
-    If required landing page is a DOI, return it as a string.  Otherwise, return None.
+    """ If required landing page is a DOI, return it as a string.  Otherwise, return None.
     """
     doi_string = None
     xpath = parentXPaths['landingPage']
@@ -272,8 +269,7 @@ def get_DOI(xml_tree):
     return doi_string
 
 def get_publication_date(xml_tree):
-    """
-    Extract ISO 8601 date and make sure timestamp is removed.
+    """ Extract ISO 8601 date and make sure timestamp is removed.
     """
     date_string = getElementText(parentXPaths['publicationDate'], xml_tree)
     if 'T' in date_string:
