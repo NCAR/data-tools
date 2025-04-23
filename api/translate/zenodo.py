@@ -181,6 +181,7 @@ def getElementsMatchingRole(roleString, contactXPath, roleCodeXPath, xml_tree):
 
     return matchingContactElements
 
+
 def getRoleMatchesAsJson(roleString, contactXPath, roleCodeXPath, xml_tree):
     """
     Return a dictionary of creators/contributors matching a specific role found at the given contact XPath.
@@ -197,13 +198,28 @@ def getRoleMatchesAsJson(roleString, contactXPath, roleCodeXPath, xml_tree):
             childXPath = childXPaths[iso_name]
             foundText = contactElement.findtext(childXPath, namespaces=ISO_NAMESPACES)
 
+            # Grab the ORCID value if it exists
+            if iso_name == 'individualAnchor' and foundText:
+                orcid_id = extract_orcid(contactElement)
+                zenodo_person['orcid'] = orcid_id
+
             # For individual names, try transforming to "LastName, FirstName" format
-            if zen_name == 'name' and get_lastname_firstname(foundText):
+            if zen_name == 'name' and foundText and get_lastname_firstname(foundText):
                 foundText = get_lastname_firstname(foundText)
-            zenodo_person[zen_name] = foundText
+            if foundText:
+                zenodo_person[zen_name] = foundText
         foundPeople.append(zenodo_person)
 
     return foundPeople
+
+
+def extract_orcid(contactElement):
+    """ Extract and return the ORCID identifier from a CitedContact element. """
+    anchorElement = contactElement.xpath(childXPaths['individualAnchor'], namespaces=ISO_NAMESPACES)
+    orcid_url = anchorElement[0].get('{http://www.w3.org/1999/xlink}href')
+    orcid_id = orcid_url.split('/')[-1]
+    return orcid_id
+
 
 def get_lastname_firstname(name_string):
     """
