@@ -5,6 +5,7 @@ from api.util.xml import getElements, getFirstElement, getXMLTree, getElementTex
 
 Person_ISO_to_Zenodo = {
     'individualName': 'name',
+    'individualAnchor': 'name',
     'organisationName' : 'affiliation',
     'roleCode': 'type'
 }
@@ -41,6 +42,7 @@ parentXPaths = {
 
 childXPaths = {
     'individualName':      'gmd:individualName/gco:CharacterString',
+    'individualAnchor':    'gmd:individualName/gmx:Anchor',
     'organisationName':    'gmd:organisationName/gco:CharacterString',
     'position':        'gmd:positionName/gco:CharacterString',
     'email':           'gmd:contactInfo/gmd:CI_Contact/gmd:address/gmd:CI_Address/gmd:electronicMailAddress/gco:CharacterString',
