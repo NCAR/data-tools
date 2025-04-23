@@ -206,16 +206,25 @@ def getRoleMatchesAsJson(roleString, contactXPath, roleCodeXPath, xml_tree):
 def get_lastname_firstname(name_string):
     """
     This function takes a person's full name, and if it has one whitespace separating two words and no commas,
-    e.g. "John Doe", it returns a modified version of name_string, of the form "Doe, John".
+    e.g. "John Doe", it returns a modified version of name_string, of the form "Doe, John".  If the full name
+    has three words, no commas, and the middle word is in the form of a middle initial, e.g. "Jane L. Plain",
+    then return "Plain, Jane L.".
 
-    If the name string does not have the form "word1 word2", the function returns None.
+    If the word string has a comma or otherwise does not match the above formats, the function returns None.
     """
     return_value = None
     words = name_string.split()
     no_comma = ',' not in name_string
-    if len(words) == 2 and no_comma:
-        return_value = "%s, %s" % (words[1], words[0])
+    if no_comma and len(words) == 2 :
+        return_value = f"{words[1]}, {words[0]}"
+    elif no_comma and len(words) == 3 and is_middle_initial(words[1]):
+        return_value = f"{words[2]}, {words[0]} {words[1]}"
     return return_value
+
+def is_middle_initial(word_string):
+    is_mi = len(word_string) == 2 and word_string[-1] == '.'
+    return is_mi
+
 
 def get_creators_as_json(xml_tree):
     """
