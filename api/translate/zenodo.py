@@ -37,7 +37,6 @@ parentXPaths = {
     'accessConstraints': '/gmd:MD_Metadata/gmd:identificationInfo/gmd:MD_DataIdentification/gmd:resourceConstraints/gmd:MD_LegalConstraints/gmd:otherConstraints/gco:CharacterString',
     'geographicExtent' : '/gmd:MD_Metadata/gmd:identificationInfo/gmd:MD_DataIdentification/gmd:extent/gmd:EX_Extent/gmd:geographicElement/gmd:EX_GeographicBoundingBox',
     'temporalExtent':    '/gmd:MD_Metadata/gmd:identificationInfo/gmd:MD_DataIdentification/gmd:extent/gmd:EX_Extent/gmd:temporalElement/gmd:EX_TemporalExtent/gmd:extent',
-    'spatialResolution': '/gmd:MD_Metadata/gmd:identificationInfo/gmd:MD_DataIdentification/gmd:spatialResolution/gmd:MD_Resolution/gmd:distance/gco:Distance',
 }
 
 childXPaths = {
@@ -74,7 +73,8 @@ METADATA_PATHS = {
 }
 
 def extract_metadata(iso_file):
-    """ Parse ISO XML file and pull metadata for Zenodo upload.
+    """
+    Parse ISO XML file and pull metadata for Zenodo upload.
     """
     metadata = {}
     xml_root = getXMLTree(iso_file)
@@ -83,13 +83,9 @@ def extract_metadata(iso_file):
         metadata[key] = value
 
     # Add fields required by Zenodo
-    #
     authors_json = get_creators_as_json(xml_root)
     metadata['creators'] = authors_json
     metadata['upload_type'] = 'dataset'
-
-    # Add optional metadata if it exists
-    #
 
     # Add DOI if it exists already
     doi_string = get_DOI(xml_root)
@@ -101,36 +97,34 @@ def extract_metadata(iso_file):
     if date_string:
         metadata['publication_date'] = date_string
 
-    (point_locations, location_notes) = get_spatial_info(xml_root)
+    # Add fields required by Zenodo
+    authors_json = get_creators_as_json(xml_root)
+    metadata['creators'] = authors_json
+    metadata['upload_type'] = 'dataset'
+
+    # Add optional metadata if it exists
+    locations = get_spatial_locations(xml_root)
 
     # If True, only the first point location is uploaded to Zenodo
     TRUNCATE_POINTS = True
-    if point_locations and TRUNCATE_POINTS:
-        point_locations = [point_locations[0]]
-    if point_locations:
-        metadata['locations'] = point_locations
+    if locations and TRUNCATE_POINTS:
+        locations = [locations[0]]
+    if locations:
+        metadata['locations'] = locations
 
-    (date_ranges, temporal_notes) = get_temporal_info(xml_root)
-    if date_ranges:
-        metadata['dates'] = date_ranges
-
-    resolution_notes = get_spatial_resolutions(xml_root)
-    notes = location_notes + temporal_notes + resolution_notes
-    if notes:
-        metadata['notes'] = notes
-
-    # Assume all uploads will go to the NCAR community on Zenodo
-    metadata['communities'] = [{"identifier": 'nsfncar'}]
+    dates = get_temporal_extents(xml_root)
+    #dates = None
+    if dates:
+        metadata['dates'] = dates
     return metadata
 
-def get_spatial_info(xml_tree):
+def get_spatial_locations(xml_tree):
     """
-    Zenodo only supports a list of points and descriptions for their spatial extent metadata.
+    Zenodo only supports a list of points for their spatial extent metadata.
     In contrast, Bounding box is the only spatial representation type supported by GDEX.
     Grab and return in a dictionary format supported by Zenodo.
     """
     locations = []
-    notes = ''
     geoExtents = getElements(xml_tree, parentXPaths['geographicExtent'])
     for geoExtent in geoExtents:
         westLon = getFirstElement(geoExtent, childXPaths['westLon']).text
@@ -140,21 +134,10 @@ def get_spatial_info(xml_tree):
         if westLon == eastLon and southLat == northLat:
             location = {'lat': float(southLat), 'lon': float(westLon), 'place': 'Missing Name'}
             locations.append(location)
-        notes = notes + (f' Longitude West Boundary: {westLon}<br> Longitude East Boundary: {eastLon}<br>' +
-                         f' Latitude South Boundary: {southLat}<br> Latitude North Boundary: {northLat}<br><br>')
-    return locations, notes
+        else:
+            print('    (skipping non-point geographic extent...)')
 
-def get_spatial_resolutions(xml_tree):
-    """ Return a description of spatial resolutions in the XML tree """
-    resolutions = ''
-    resolution_elements = getElements(xml_tree, parentXPaths['spatialResolution'])
-    for element in resolution_elements:
-        resolution_value = element.text
-        resolution_units = element.get('uom')
-        resolutions = resolutions + f' Spatial Resolution: {resolution_value} {resolution_units}<br>'
-    if resolutions:
-        resolutions = resolutions + '<br>'
-    return resolutions
+    return locations
 
 def truncate_iso_date(dateString):
     """ Return an ISO date string without hours, minutes, seconds.
@@ -163,25 +146,23 @@ def truncate_iso_date(dateString):
         dateString = dateString.split('T')[0]
     return dateString
 
-def get_temporal_info(xml_tree):
-    """ Zenodo supports only ISO date strings, so replace any occurrence of "now" with today's date.
+def get_temporal_extents(xml_tree):
+    """
+    Zenodo supports only ISO date strings, so replace any occurrence of "now" with today's date.
     """
     dates = []
-    notes = ''
     dateRanges = getElements(xml_tree, parentXPaths['temporalExtent'])
     for dateRange in dateRanges:
         rangeBegin = getFirstElement(dateRange, childXPaths['extentBegin']).text
         rangeEnd = getFirstElement(dateRange, childXPaths['extentEnd']).text
         if rangeBegin and rangeEnd:
-            notes = notes + (f' Temporal Range Start: {rangeBegin}<br>' +
-                             f' Temporal Range End: {rangeEnd}<br><br>')
             if rangeEnd.lower() == 'now':
                 rangeEnd = datetime.datetime.now().isoformat()
             rangeBegin = truncate_iso_date(rangeBegin)
             rangeEnd = truncate_iso_date(rangeEnd)
             date = {'start': rangeBegin, 'end': rangeEnd, 'type': 'Valid'}
             dates.append(date)
-    return dates, notes
+    return dates
 
 
 def getElementsMatchingRole(roleString, contactXPath, roleCodeXPath, xml_tree):
@@ -199,7 +180,8 @@ def getElementsMatchingRole(roleString, contactXPath, roleCodeXPath, xml_tree):
     return matchingContactElements
 
 def getRoleMatchesAsJson(roleString, contactXPath, roleCodeXPath, xml_tree):
-    """ Return a dictionary of creators/contributors matching a specific role found at the given contact XPath.
+    """
+    Return a dictionary of creators/contributors matching a specific role found at the given contact XPath.
     """
     foundPeople = []
     matchingContactElements = getElementsMatchingRole(roleString, contactXPath, roleCodeXPath, xml_tree)
@@ -214,7 +196,7 @@ def getRoleMatchesAsJson(roleString, contactXPath, roleCodeXPath, xml_tree):
             foundText = contactElement.findtext(childXPath, namespaces=ISO_NAMESPACES)
 
             # For individual names, try transforming to "LastName, FirstName" format
-            if zen_name == 'name' and foundText and get_lastname_firstname(foundText):
+            if zen_name == 'name' and get_lastname_firstname(foundText):
                 foundText = get_lastname_firstname(foundText)
             zenodo_person[zen_name] = foundText
         foundPeople.append(zenodo_person)
@@ -231,17 +213,9 @@ def get_lastname_firstname(name_string):
     return_value = None
     words = name_string.split()
     no_comma = ',' not in name_string
-    if no_comma and len(words) == 2:
+    if len(words) == 2 and no_comma:
         return_value = "%s, %s" % (words[1], words[0])
-    elif no_comma and len(words) == 3 and is_middle_initial(words[1]):
-        return_value = f"{words[2]}, {words[0]} {words[1]}"
     return return_value
-
-
-def is_middle_initial(word_string):
-    is_mi = len(word_string) == 2 and word_string[-1] == '.'
-    return is_mi
-
 
 def get_creators_as_json(xml_tree):
     """
@@ -262,7 +236,8 @@ def is_DOI(urlString):
     return is_doi
 
 def get_DOI(xml_tree):
-    """ If required landing page is a DOI, return it as a string.  Otherwise, return None.
+    """
+    If required landing page is a DOI, return it as a string.  Otherwise, return None.
     """
     doi_string = None
     xpath = parentXPaths['landingPage']
@@ -272,7 +247,8 @@ def get_DOI(xml_tree):
     return doi_string
 
 def get_publication_date(xml_tree):
-    """ Extract ISO 8601 date and make sure timestamp is removed.
+    """
+    Extract ISO 8601 date and make sure timestamp is removed.
     """
     date_string = getElementText(parentXPaths['publicationDate'], xml_tree)
     if 'T' in date_string:
