@@ -118,6 +118,9 @@ def extract_metadata(iso_file):
     notes = location_notes + temporal_notes + resolution_notes
     if notes:
         metadata['notes'] = notes
+
+    # Assume all uploads will go to the NCAR community on Zenodo
+    metadata['communities'] = [{"identifier": 'nsfncar'}]
     return metadata
 
 def get_spatial_info(xml_tree):
