@@ -88,6 +88,7 @@ def extract_metadata(iso_file):
     authors_json = get_creators_as_json(xml_root)
     metadata['creators'] = authors_json
     metadata['upload_type'] = 'dataset'
+    metadata['license'] = 'cc-by-4.0'
 
     # Add DOI if it exists already
     doi_string = get_DOI(xml_root)
@@ -98,11 +99,6 @@ def extract_metadata(iso_file):
     date_string = get_publication_date(xml_root)
     if date_string:
         metadata['publication_date'] = date_string
-
-    # Add fields required by Zenodo
-    authors_json = get_creators_as_json(xml_root)
-    metadata['creators'] = authors_json
-    metadata['upload_type'] = 'dataset'
 
     # Add dataset contributors
     contributors_json = get_contributors_as_json(xml_root)
@@ -126,6 +122,7 @@ def extract_metadata(iso_file):
     notes = location_notes + temporal_notes + resolution_notes
     if notes:
         metadata['notes'] = notes
+
     return metadata
 
 def get_spatial_info(xml_tree):
