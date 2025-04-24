@@ -33,7 +33,7 @@ parentXPaths = {
     'publicationDate'  : '/gmd:MD_Metadata/gmd:identificationInfo/gmd:MD_DataIdentification/gmd:citation/gmd:CI_Citation/gmd:date/gmd:CI_Date/gmd:date/gco:Date',
     'citedContact'     : '/gmd:MD_Metadata/gmd:identificationInfo/gmd:MD_DataIdentification/gmd:citation/gmd:CI_Citation/gmd:citedResponsibleParty/gmd:CI_ResponsibleParty',
     'abstract'         : '/gmd:MD_Metadata/gmd:identificationInfo/gmd:MD_DataIdentification/gmd:abstract/gco:CharacterString',
-    'supportContact'   : '/gmd:MD_Metadata/gmd:identificationInfo/gmd:MD_DataIdentification/gmd:pointOfContact',
+    'supportContact'   : '/gmd:MD_Metadata/gmd:identificationInfo/gmd:MD_DataIdentification/gmd:pointOfContact/gmd:CI_ResponsibleParty',
     'legalConstraints' : '/gmd:MD_Metadata/gmd:identificationInfo/gmd:MD_DataIdentification/gmd:resourceConstraints/gmd:MD_LegalConstraints/gmd:useLimitation/gco:CharacterString',
     'accessConstraints': '/gmd:MD_Metadata/gmd:identificationInfo/gmd:MD_DataIdentification/gmd:resourceConstraints/gmd:MD_LegalConstraints/gmd:otherConstraints/gco:CharacterString',
     'geographicExtent' : '/gmd:MD_Metadata/gmd:identificationInfo/gmd:MD_DataIdentification/gmd:extent/gmd:EX_Extent/gmd:geographicElement/gmd:EX_GeographicBoundingBox',
@@ -76,8 +76,7 @@ METADATA_PATHS = {
 }
 
 def extract_metadata(iso_file):
-    """
-    Parse ISO XML file and pull metadata for Zenodo upload.
+    """ Parse ISO XML file and pull metadata for Zenodo upload.
     """
     metadata = {}
     xml_root = getXMLTree(iso_file)
@@ -104,6 +103,10 @@ def extract_metadata(iso_file):
     authors_json = get_creators_as_json(xml_root)
     metadata['creators'] = authors_json
     metadata['upload_type'] = 'dataset'
+
+    # Add dataset contributors
+    contributors_json = get_contributors_as_json(xml_root)
+    metadata['contributors'] = contributors_json
 
     # Add optional metadata if it exists
     (point_locations, location_notes) = get_spatial_info(xml_root)
@@ -146,6 +149,7 @@ def get_spatial_info(xml_tree):
                          f' Latitude South Boundary: {southLat}<br> Latitude North Boundary: {northLat}<br><br>')
     return locations, notes
 
+
 def get_spatial_resolutions(xml_tree):
     """ Return a description of spatial resolutions in the XML tree """
     resolutions = ''
@@ -187,14 +191,14 @@ def get_temporal_info(xml_tree):
     return dates, notes
 
 
-def getElementsMatchingRole(roleString, contactXPath, roleCodeXPath, xml_tree):
+def getElementsMatchingRole(roleString, contactXPath, xml_tree):
     """ Get all XML contact elements matching a specific role for the given contact XPath.
     """
     matchingContactElements = []
     contactElements = xml_tree.xpath(contactXPath, namespaces=ISO_NAMESPACES)
 
     for contactElement in contactElements:
-        roleCodeElements = contactElement.xpath(roleCodeXPath, namespaces=ISO_NAMESPACES)
+        roleCodeElements = contactElement.xpath(childXPaths['roleCode'], namespaces=ISO_NAMESPACES)
 
         if roleCodeElements and roleCodeElements[0].get('codeListValue') == roleString:
             matchingContactElements.append(contactElement)
@@ -202,12 +206,11 @@ def getElementsMatchingRole(roleString, contactXPath, roleCodeXPath, xml_tree):
     return matchingContactElements
 
 
-def getRoleMatchesAsJson(roleString, contactXPath, roleCodeXPath, xml_tree):
-    """
-    Return a dictionary of creators/contributors matching a specific role found at the given contact XPath.
+def getRoleMatchesAsJson(roleString, contactXPath, xml_tree):
+    """ Return a dictionary of creators/contributors matching a specific role found at the given contact XPath.
     """
     foundPeople = []
-    matchingContactElements = getElementsMatchingRole(roleString, contactXPath, roleCodeXPath, xml_tree)
+    matchingContactElements = getElementsMatchingRole(roleString, contactXPath, xml_tree)
     for contactElement in matchingContactElements:
         zenodo_person = {}
         for (iso_name, zen_name) in Person_ISO_to_Zenodo.items():
@@ -259,6 +262,7 @@ def get_lastname_firstname(name_string):
         return_value = f"{words[2]}, {words[0]} {words[1]}"
     return return_value
 
+
 def is_middle_initial(word_string):
     is_mi = len(word_string) == 2 and word_string[-1] == '.'
     return is_mi
@@ -269,8 +273,21 @@ def get_creators_as_json(xml_tree):
     Searches an ISO XML element tree for authors and returns a JSON description of them according to Zenodo's
     'creator' metadata concept.
     """
-    authorJson = getRoleMatchesAsJson('author', parentXPaths['citedContact'], childXPaths['roleCode'], xml_tree)
+    authorJson = getRoleMatchesAsJson('author', parentXPaths['citedContact'], xml_tree)
     return authorJson
+
+def get_contributors_as_json(xml_tree):
+    """
+    Searches an ISO XML element tree for Resource Support Contact and Metadata Contact, and returns the first
+    instances of each.
+    """
+    metadata_contact_json = getRoleMatchesAsJson('pointOfContact', parentXPaths['metadataContact'], xml_tree)
+    metadata_contact_json = metadata_contact_json[0]
+    metadata_contact_json['type'] = 'RelatedPerson'
+    support_contact_json = getRoleMatchesAsJson('pointOfContact', parentXPaths['supportContact'], xml_tree)
+    support_contact_json = support_contact_json[0]
+    support_contact_json['type'] = 'ContactPerson'
+    return [metadata_contact_json, support_contact_json]
 
 
 def is_DOI(urlString):
