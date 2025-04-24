@@ -29,6 +29,7 @@ parentXPaths = {
     'assetType'        : '/gmd:MD_Metadata/gmd:hierarchyLevel/gmd:MD_ScopeCode',
     'metadataContact'  : '/gmd:MD_Metadata/gmd:contact/gmd:CI_ResponsibleParty',
     'landingPage'      : '/gmd:MD_Metadata/gmd:dataSetURI/gco:CharacterString',
+    'keywords'         : '/gmd:MD_Metadata/gmd:identificationInfo/gmd:MD_DataIdentification/gmd:descriptiveKeywords/gmd:MD_Keywords',
     'title'            : '/gmd:MD_Metadata/gmd:identificationInfo/gmd:MD_DataIdentification/gmd:citation/gmd:CI_Citation/gmd:title/gco:CharacterString',
     'publicationDate'  : '/gmd:MD_Metadata/gmd:identificationInfo/gmd:MD_DataIdentification/gmd:citation/gmd:CI_Citation/gmd:date/gmd:CI_Date/gmd:date/gco:Date',
     'citedContact'     : '/gmd:MD_Metadata/gmd:identificationInfo/gmd:MD_DataIdentification/gmd:citation/gmd:CI_Citation/gmd:citedResponsibleParty/gmd:CI_ResponsibleParty',
@@ -123,7 +124,29 @@ def extract_metadata(iso_file):
     if notes:
         metadata['notes'] = notes
 
+    keywords = get_keywords(xml_root)
+    if keywords:
+        metadata['keywords'] = keywords
+
     return metadata
+
+
+def get_keywords(xml_tree):
+    """
+    Extract and return a list of keywords from an ISO XML file.
+    Make sure 'Dataset' is not in the list, as this is a special "resource type" keyword.
+    """
+    keywords = []
+    elements = getElements(xml_tree, parentXPaths['keywords'])
+    for element in elements:
+        keyword = getElementText(childXPaths['keyword'], element)
+        keywords.append(keyword)
+
+    filtered_keywords = [keyword for keyword in keywords if keyword.lower() != 'dataset']
+    return filtered_keywords
+
+
+
 
 def get_spatial_info(xml_tree):
     """
@@ -278,13 +301,13 @@ def get_contributors_as_json(xml_tree):
     Searches an ISO XML element tree for Resource Support Contact and Metadata Contact, and returns the first
     instances of each.
     """
-    metadata_contact_json = getRoleMatchesAsJson('pointOfContact', parentXPaths['metadataContact'], xml_tree)
-    metadata_contact_json = metadata_contact_json[0]
-    metadata_contact_json['type'] = 'RelatedPerson'
     support_contact_json = getRoleMatchesAsJson('pointOfContact', parentXPaths['supportContact'], xml_tree)
     support_contact_json = support_contact_json[0]
     support_contact_json['type'] = 'ContactPerson'
-    return [metadata_contact_json, support_contact_json]
+    metadata_contact_json = getRoleMatchesAsJson('pointOfContact', parentXPaths['metadataContact'], xml_tree)
+    metadata_contact_json = metadata_contact_json[0]
+    metadata_contact_json['type'] = 'RelatedPerson'
+    return [support_contact_json, metadata_contact_json]
 
 
 def is_DOI(urlString):
