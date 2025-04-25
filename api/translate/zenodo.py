@@ -40,6 +40,7 @@ parentXPaths = {
     'geographicExtent' : '/gmd:MD_Metadata/gmd:identificationInfo/gmd:MD_DataIdentification/gmd:extent/gmd:EX_Extent/gmd:geographicElement/gmd:EX_GeographicBoundingBox',
     'temporalExtent':    '/gmd:MD_Metadata/gmd:identificationInfo/gmd:MD_DataIdentification/gmd:extent/gmd:EX_Extent/gmd:temporalElement/gmd:EX_TemporalExtent/gmd:extent',
     'spatialResolution': '/gmd:MD_Metadata/gmd:identificationInfo/gmd:MD_DataIdentification/gmd:spatialResolution/gmd:MD_Resolution/gmd:distance/gco:Distance',
+    'relatedLink': '/gmd:MD_Metadata/gmd:metadataExtensionInfo/gmd:MD_MetadataExtensionInformation/gmd:extensionOnLineResource/gmd:CI_OnlineResource',
 }
 
 childXPaths = {
@@ -120,14 +121,21 @@ def extract_metadata(iso_file):
         metadata['dates'] = date_ranges
 
     resolution_notes = get_spatial_resolutions(xml_root)
-    notes = location_notes + temporal_notes + resolution_notes
-    if notes:
-        metadata['notes'] = notes
 
     keywords = get_keywords(xml_root)
     if keywords:
         metadata['keywords'] = keywords
 
+    metadata['notes'] = ''
+    related_identifiers, notes = get_related_identifiers(xml_root)
+
+    if related_identifiers:
+        metadata['related_identifiers'] = related_identifiers
+        metadata['notes'] = metadata['notes'] + notes
+
+    notes = location_notes + temporal_notes + resolution_notes
+    if notes:
+        metadata['notes'] = metadata['notes'] + '<h2>SpatioTemporal Characteristics</h2>' + notes
     return metadata
 
 
@@ -338,3 +346,39 @@ def get_publication_date(xml_tree):
     if 'T' in date_string:
         date_string = date_string.split('T')[0]
     return date_string
+
+
+def get_related_identifiers(xml_tree):
+    """ Find DSET Related Links and return a JSON list with elements of the form:
+        {'name':nameString, 'linkage':urlString, 'description':descriptionString}.
+        If no matches are found, return the empty list.
+    """
+    related_identifiers = []
+    Notes = ''
+    nonEmptyTextCriterionForXPath = '[string-length(text()) > 0]'
+
+    resourceElements = xml_tree.xpath(parentXPaths['relatedLink'], namespaces=ISO_NAMESPACES)
+    for resourceElement in resourceElements:
+        linkageXPath = childXPaths['linkage'] + nonEmptyTextCriterionForXPath
+        linkageElements = resourceElement.xpath(linkageXPath, namespaces=ISO_NAMESPACES)
+        if linkageElements:
+            linkageText = linkageElements[0].text
+            nameXPath = childXPaths['name'] + nonEmptyTextCriterionForXPath
+            nameElements = resourceElement.xpath(nameXPath, namespaces=ISO_NAMESPACES)
+            if nameElements:
+                nameText = nameElements[0].text
+            else:
+                nameText = linkageText
+            descriptionXPath = childXPaths['description'] + nonEmptyTextCriterionForXPath
+            descriptionElements = resourceElement.xpath(descriptionXPath, namespaces=ISO_NAMESPACES)
+            if descriptionElements:
+                descriptionText = descriptionElements[0].text
+            else:
+                descriptionText = ''
+            related_identifiers.append({'identifier': linkageText, 'relation': 'isSupplementedBy', 'resource_type': 'other'})
+            href = f'<p><a href="{linkageText}">{nameText}</a> : {descriptionText}</p>'
+            Notes = Notes + href
+
+    if Notes:
+        Notes = '<h2>Related Links</h2> ' + Notes
+    return related_identifiers, Notes
