@@ -37,7 +37,7 @@ Tested with python 3.8.
 
 Program Version: '''
 
-__version_info__ = ('2025', '03', '20')
+__version_info__ = ('2025', '05', '02')
 __version__ = '-'.join(__version_info__)
 
 
