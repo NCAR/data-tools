@@ -136,7 +136,9 @@ if resume_file == 'None':
 
     dataset_id = r.json()["id"]
     bucket_url = r.json()["links"]["bucket"]
-    resume_upload_data = {'dataset_id': dataset_id, 'bucket_url': bucket_url}
+    # Archive DOI value to resume file if it exists
+    dataset_doi = metadata.get('doi', '')
+    resume_upload_data = {'dataset_id': dataset_id, 'bucket_url': bucket_url, 'doi': dataset_doi}
 
     # Save upload ids to a 'resume file'
     resume_file_folder = '/tmp'
