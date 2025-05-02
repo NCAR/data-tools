@@ -5,6 +5,7 @@ from api.util.xml import getElements, getFirstElement, getXMLTree, getElementTex
 
 Person_ISO_to_Zenodo = {
     'individualName': 'name',
+    'individualAnchor': 'name',
     'organisationName' : 'affiliation',
     'roleCode': 'type'
 }
@@ -19,7 +20,6 @@ RoleCode_ISO_to_Zenodo = {
     'pointOfContact': 'ContactPerson',
     'principalInvestigator': 'ProjectLeader',
     'processor': 'Other',
-    'publisher': 'Producer',
 }
 
 
@@ -28,20 +28,23 @@ parentXPaths = {
     'assetType'        : '/gmd:MD_Metadata/gmd:hierarchyLevel/gmd:MD_ScopeCode',
     'metadataContact'  : '/gmd:MD_Metadata/gmd:contact/gmd:CI_ResponsibleParty',
     'landingPage'      : '/gmd:MD_Metadata/gmd:dataSetURI/gco:CharacterString',
+    'keywords'         : '/gmd:MD_Metadata/gmd:identificationInfo/gmd:MD_DataIdentification/gmd:descriptiveKeywords/gmd:MD_Keywords',
     'title'            : '/gmd:MD_Metadata/gmd:identificationInfo/gmd:MD_DataIdentification/gmd:citation/gmd:CI_Citation/gmd:title/gco:CharacterString',
     'publicationDate'  : '/gmd:MD_Metadata/gmd:identificationInfo/gmd:MD_DataIdentification/gmd:citation/gmd:CI_Citation/gmd:date/gmd:CI_Date/gmd:date/gco:Date',
     'citedContact'     : '/gmd:MD_Metadata/gmd:identificationInfo/gmd:MD_DataIdentification/gmd:citation/gmd:CI_Citation/gmd:citedResponsibleParty/gmd:CI_ResponsibleParty',
     'abstract'         : '/gmd:MD_Metadata/gmd:identificationInfo/gmd:MD_DataIdentification/gmd:abstract/gco:CharacterString',
-    'supportContact'   : '/gmd:MD_Metadata/gmd:identificationInfo/gmd:MD_DataIdentification/gmd:pointOfContact',
+    'supportContact'   : '/gmd:MD_Metadata/gmd:identificationInfo/gmd:MD_DataIdentification/gmd:pointOfContact/gmd:CI_ResponsibleParty',
     'legalConstraints' : '/gmd:MD_Metadata/gmd:identificationInfo/gmd:MD_DataIdentification/gmd:resourceConstraints/gmd:MD_LegalConstraints/gmd:useLimitation/gco:CharacterString',
     'accessConstraints': '/gmd:MD_Metadata/gmd:identificationInfo/gmd:MD_DataIdentification/gmd:resourceConstraints/gmd:MD_LegalConstraints/gmd:otherConstraints/gco:CharacterString',
     'geographicExtent' : '/gmd:MD_Metadata/gmd:identificationInfo/gmd:MD_DataIdentification/gmd:extent/gmd:EX_Extent/gmd:geographicElement/gmd:EX_GeographicBoundingBox',
     'temporalExtent':    '/gmd:MD_Metadata/gmd:identificationInfo/gmd:MD_DataIdentification/gmd:extent/gmd:EX_Extent/gmd:temporalElement/gmd:EX_TemporalExtent/gmd:extent',
     'spatialResolution': '/gmd:MD_Metadata/gmd:identificationInfo/gmd:MD_DataIdentification/gmd:spatialResolution/gmd:MD_Resolution/gmd:distance/gco:Distance',
+    'relatedLink': '/gmd:MD_Metadata/gmd:metadataExtensionInfo/gmd:MD_MetadataExtensionInformation/gmd:extensionOnLineResource/gmd:CI_OnlineResource',
 }
 
 childXPaths = {
     'individualName':      'gmd:individualName/gco:CharacterString',
+    'individualAnchor':    'gmd:individualName/gmx:Anchor',
     'organisationName':    'gmd:organisationName/gco:CharacterString',
     'position':        'gmd:positionName/gco:CharacterString',
     'email':           'gmd:contactInfo/gmd:CI_Contact/gmd:address/gmd:CI_Address/gmd:electronicMailAddress/gco:CharacterString',
@@ -83,13 +86,10 @@ def extract_metadata(iso_file):
         metadata[key] = value
 
     # Add fields required by Zenodo
-    #
     authors_json = get_creators_as_json(xml_root)
     metadata['creators'] = authors_json
     metadata['upload_type'] = 'dataset'
-
-    # Add optional metadata if it exists
-    #
+    metadata['license'] = 'cc-by-4.0'
 
     # Add DOI if it exists already
     doi_string = get_DOI(xml_root)
@@ -101,6 +101,11 @@ def extract_metadata(iso_file):
     if date_string:
         metadata['publication_date'] = date_string
 
+    # Add dataset contributors
+    contributors_json = get_contributors_as_json(xml_root)
+    metadata['contributors'] = contributors_json
+
+    # Add optional metadata if it exists
     (point_locations, location_notes) = get_spatial_info(xml_root)
 
     # If True, only the first point location is uploaded to Zenodo
@@ -115,10 +120,40 @@ def extract_metadata(iso_file):
         metadata['dates'] = date_ranges
 
     resolution_notes = get_spatial_resolutions(xml_root)
+
+    keywords = get_keywords(xml_root)
+    if keywords:
+        metadata['keywords'] = keywords
+
+    metadata['notes'] = ''
+    related_identifiers, notes = get_related_identifiers(xml_root)
+
+    if related_identifiers:
+        metadata['related_identifiers'] = related_identifiers
+        metadata['notes'] = metadata['notes'] + notes
+
     notes = location_notes + temporal_notes + resolution_notes
     if notes:
-        metadata['notes'] = notes
+        metadata['notes'] = metadata['notes'] + '<h2>SpatioTemporal Characteristics</h2>' + notes
     return metadata
+
+
+def get_keywords(xml_tree):
+    """
+    Extract and return a list of keywords from an ISO XML file.
+    Make sure 'Dataset' is not in the list, as this is a special "resource type" keyword.
+    """
+    keywords = []
+    elements = getElements(xml_tree, parentXPaths['keywords'])
+    for element in elements:
+        keyword = getElementText(childXPaths['keyword'], element)
+        keywords.append(keyword)
+
+    filtered_keywords = [keyword for keyword in keywords if keyword.lower() != 'dataset']
+    return filtered_keywords
+
+
+
 
 def get_spatial_info(xml_tree):
     """
@@ -141,6 +176,7 @@ def get_spatial_info(xml_tree):
                          f' Latitude South Boundary: {southLat}<br> Latitude North Boundary: {northLat}<br><br>')
     return locations, notes
 
+
 def get_spatial_resolutions(xml_tree):
     """ Return a description of spatial resolutions in the XML tree """
     resolutions = ''
@@ -152,6 +188,7 @@ def get_spatial_resolutions(xml_tree):
     if resolutions:
         resolutions = resolutions + '<br>'
     return resolutions
+
 
 def truncate_iso_date(dateString):
     """ Return an ISO date string without hours, minutes, seconds.
@@ -181,25 +218,26 @@ def get_temporal_info(xml_tree):
     return dates, notes
 
 
-def getElementsMatchingRole(roleString, contactXPath, roleCodeXPath, xml_tree):
+def getElementsMatchingRole(roleString, contactXPath, xml_tree):
     """ Get all XML contact elements matching a specific role for the given contact XPath.
     """
     matchingContactElements = []
     contactElements = xml_tree.xpath(contactXPath, namespaces=ISO_NAMESPACES)
 
     for contactElement in contactElements:
-        roleCodeElements = contactElement.xpath(roleCodeXPath, namespaces=ISO_NAMESPACES)
+        roleCodeElements = contactElement.xpath(childXPaths['roleCode'], namespaces=ISO_NAMESPACES)
 
         if roleCodeElements and roleCodeElements[0].get('codeListValue') == roleString:
             matchingContactElements.append(contactElement)
 
     return matchingContactElements
 
-def getRoleMatchesAsJson(roleString, contactXPath, roleCodeXPath, xml_tree):
+
+def getRoleMatchesAsJson(roleString, contactXPath, xml_tree):
     """ Return a dictionary of creators/contributors matching a specific role found at the given contact XPath.
     """
     foundPeople = []
-    matchingContactElements = getElementsMatchingRole(roleString, contactXPath, roleCodeXPath, xml_tree)
+    matchingContactElements = getElementsMatchingRole(roleString, contactXPath, xml_tree)
     for contactElement in matchingContactElements:
         zenodo_person = {}
         for (iso_name, zen_name) in Person_ISO_to_Zenodo.items():
@@ -210,26 +248,43 @@ def getRoleMatchesAsJson(roleString, contactXPath, roleCodeXPath, xml_tree):
             childXPath = childXPaths[iso_name]
             foundText = contactElement.findtext(childXPath, namespaces=ISO_NAMESPACES)
 
+            # Grab the ORCID value if it exists
+            if iso_name == 'individualAnchor' and foundText:
+                orcid_id = extract_orcid(contactElement)
+                zenodo_person['orcid'] = orcid_id
+
             # For individual names, try transforming to "LastName, FirstName" format
             if zen_name == 'name' and foundText and get_lastname_firstname(foundText):
                 foundText = get_lastname_firstname(foundText)
-            zenodo_person[zen_name] = foundText
+            if foundText:
+                zenodo_person[zen_name] = foundText
         foundPeople.append(zenodo_person)
 
     return foundPeople
 
+
+def extract_orcid(contactElement):
+    """ Extract and return the ORCID identifier from a CitedContact element. """
+    anchorElement = contactElement.xpath(childXPaths['individualAnchor'], namespaces=ISO_NAMESPACES)
+    orcid_url = anchorElement[0].get('{http://www.w3.org/1999/xlink}href')
+    orcid_id = orcid_url.split('/')[-1]
+    return orcid_id
+
+
 def get_lastname_firstname(name_string):
     """
     This function takes a person's full name, and if it has one whitespace separating two words and no commas,
-    e.g. "John Doe", it returns a modified version of name_string, of the form "Doe, John".
+    e.g. "John Doe", it returns a modified version of name_string, of the form "Doe, John".  If the full name
+    has three words, no commas, and the middle word is in the form of a middle initial, e.g. "Jane L. Plain",
+    then return "Plain, Jane L.".
 
-    If the name string does not have the form "word1 word2", the function returns None.
+    If the word string has a comma or otherwise does not match the above formats, the function returns None.
     """
     return_value = None
     words = name_string.split()
     no_comma = ',' not in name_string
-    if no_comma and len(words) == 2:
-        return_value = "%s, %s" % (words[1], words[0])
+    if no_comma and len(words) == 2 :
+        return_value = f"{words[1]}, {words[0]}"
     elif no_comma and len(words) == 3 and is_middle_initial(words[1]):
         return_value = f"{words[2]}, {words[0]} {words[1]}"
     return return_value
@@ -245,8 +300,26 @@ def get_creators_as_json(xml_tree):
     Searches an ISO XML element tree for authors and returns a JSON description of them according to Zenodo's
     'creator' metadata concept.
     """
-    authorJson = getRoleMatchesAsJson('author', parentXPaths['citedContact'], childXPaths['roleCode'], xml_tree)
+    authorJson = getRoleMatchesAsJson('author', parentXPaths['citedContact'], xml_tree)
     return authorJson
+
+def get_contributors_as_json(xml_tree):
+    """
+    Searches an ISO XML element tree for Resource Support Contact and Metadata Contact, and returns the first
+    instances of each.
+    """
+    support_contact_json = getRoleMatchesAsJson('pointOfContact', parentXPaths['supportContact'], xml_tree)
+    support_contact_json = support_contact_json[0]
+    support_contact_json['type'] = 'ContactPerson'
+    metadata_contact_json = getRoleMatchesAsJson('pointOfContact', parentXPaths['metadataContact'], xml_tree)
+    metadata_contact_json = metadata_contact_json[0]
+    metadata_contact_json['type'] = 'RelatedPerson'
+    # Don't upload position names to Zenodo, as it does not fit their contributor model.
+    if 'GDEX' in metadata_contact_json['name']:
+        return_list = [support_contact_json]
+    else:
+        return_list = [support_contact_json, metadata_contact_json]
+    return return_list
 
 
 def is_DOI(urlString):
@@ -259,7 +332,8 @@ def is_DOI(urlString):
     return is_doi
 
 def get_DOI(xml_tree):
-    """ If required landing page is a DOI, return it as a string.  Otherwise, return None.
+    """
+    If required landing page is a DOI, return it as a string.  Otherwise, return None.
     """
     doi_string = None
     xpath = parentXPaths['landingPage']
@@ -269,9 +343,46 @@ def get_DOI(xml_tree):
     return doi_string
 
 def get_publication_date(xml_tree):
-    """ Extract ISO 8601 date and make sure timestamp is removed.
+    """
+    Extract ISO 8601 date and make sure timestamp is removed.
     """
     date_string = getElementText(parentXPaths['publicationDate'], xml_tree)
     if 'T' in date_string:
         date_string = date_string.split('T')[0]
     return date_string
+
+
+def get_related_identifiers(xml_tree):
+    """ Find DSET Related Links and return a JSON list with elements of the form:
+        {'name':nameString, 'linkage':urlString, 'description':descriptionString}.
+        If no matches are found, return the empty list.
+    """
+    related_identifiers = []
+    Notes = ''
+    nonEmptyTextCriterionForXPath = '[string-length(text()) > 0]'
+
+    resourceElements = xml_tree.xpath(parentXPaths['relatedLink'], namespaces=ISO_NAMESPACES)
+    for resourceElement in resourceElements:
+        linkageXPath = childXPaths['linkage'] + nonEmptyTextCriterionForXPath
+        linkageElements = resourceElement.xpath(linkageXPath, namespaces=ISO_NAMESPACES)
+        if linkageElements:
+            linkageText = linkageElements[0].text
+            nameXPath = childXPaths['name'] + nonEmptyTextCriterionForXPath
+            nameElements = resourceElement.xpath(nameXPath, namespaces=ISO_NAMESPACES)
+            if nameElements:
+                nameText = nameElements[0].text
+            else:
+                nameText = linkageText
+            descriptionXPath = childXPaths['description'] + nonEmptyTextCriterionForXPath
+            descriptionElements = resourceElement.xpath(descriptionXPath, namespaces=ISO_NAMESPACES)
+            if descriptionElements:
+                descriptionText = descriptionElements[0].text
+            else:
+                descriptionText = ''
+A            related_identifiers.append({'identifier': linkageText, 'relation': 'Compiles', 'resource_type': 'other'})
+            href = f'<p><a href="{linkageText}">{nameText}</a> : {descriptionText}</p>'
+            Notes = Notes + href
+
+    if Notes:
+        Notes = '<h2>Related Links</h2> ' + Notes
+    return related_identifiers, Notes
