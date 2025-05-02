@@ -20,7 +20,6 @@ RoleCode_ISO_to_Zenodo = {
     'pointOfContact': 'ContactPerson',
     'principalInvestigator': 'ProjectLeader',
     'processor': 'Other',
-    'publisher': 'Producer',
 }
 
 
@@ -315,7 +314,12 @@ def get_contributors_as_json(xml_tree):
     metadata_contact_json = getRoleMatchesAsJson('pointOfContact', parentXPaths['metadataContact'], xml_tree)
     metadata_contact_json = metadata_contact_json[0]
     metadata_contact_json['type'] = 'RelatedPerson'
-    return [support_contact_json, metadata_contact_json]
+    # Don't upload position names to Zenodo, as it does not fit their contributor model.
+    if 'GDEX' in metadata_contact_json['name']:
+        return_list = [support_contact_json]
+    else:
+        return_list = [support_contact_json, metadata_contact_json]
+    return return_list
 
 
 def is_DOI(urlString):
@@ -375,7 +379,7 @@ def get_related_identifiers(xml_tree):
                 descriptionText = descriptionElements[0].text
             else:
                 descriptionText = ''
-            related_identifiers.append({'identifier': linkageText, 'relation': 'isSupplementedBy', 'resource_type': 'other'})
+A            related_identifiers.append({'identifier': linkageText, 'relation': 'Compiles', 'resource_type': 'other'})
             href = f'<p><a href="{linkageText}">{nameText}</a> : {descriptionText}</p>'
             Notes = Notes + href
 
