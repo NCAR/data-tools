@@ -76,7 +76,7 @@ DataCite metadata is obtained from the DataCite website, so an internet connecti
 
 ### dset2iso.py
 
-A utility for translating JSON metadata into ISO 19139 metadata.
+A utility for translating DSET JSON metadata into ISO 19139 metadata.
 
 See the JSON input file found at [test_dset_full.txt](defaultInputRecords/test_dset_full.txt) for a complete example of the different metadata concepts that can be converted.  The converted file can be found at [test_dset_full.xml](defaultOutputRecords/test_dset_full.xml).
 
