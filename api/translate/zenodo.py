@@ -379,7 +379,7 @@ def get_related_identifiers(xml_tree):
                 descriptionText = descriptionElements[0].text
             else:
                 descriptionText = ''
-A            related_identifiers.append({'identifier': linkageText, 'relation': 'Compiles', 'resource_type': 'other'})
+            related_identifiers.append({'identifier': linkageText, 'relation': 'Compiles', 'resource_type': 'other'})
             href = f'<p><a href="{linkageText}">{nameText}</a> : {descriptionText}</p>'
             Notes = Notes + href
 
