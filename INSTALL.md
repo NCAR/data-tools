@@ -1,4 +1,4 @@
-# dset-JSON-to-ISO19139:  Installation Instructions
+# data-tools:  Installation Instructions
 
 
 ## Prerequisites 
@@ -85,7 +85,7 @@ If you cloned the repo, type these commands:
 
      mv <cloned-repo> <install_directory>
      cd <install_directory>
-     cd dset-JSON-to-ISO19139
+     cd data-tools
      $INSTALL_CMD
 
 If you downloaded the zip file, type these commands:
@@ -93,9 +93,9 @@ If you downloaded the zip file, type these commands:
      mv <zip_file> <install_directory>
      cd <install_directory>
      unzip <zip_file>
-     cd dset-JSON-to-ISO19139-main
+     cd data-tools-main
      $INSTALL_CMD
 
-If the final install command completes without errors, the translator should be ready to use.   To test that your installation works correctly, the following command should run without producing errors: 
+If the final install command completes without errors, the scripts should be ready to use.   To test that your installation works correctly, the following command should run without producing errors: 
 
      python dset2iso.py  < defaultInputRecords/test_dset_full.txt  > test_dset_full.xml
