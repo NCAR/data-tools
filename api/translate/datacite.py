@@ -1,4 +1,4 @@
-import sys
+#import sys
 from datetime import datetime
 
 import api.util.xml as xml
@@ -8,7 +8,7 @@ roleMappingDataCiteToISO = {
     "Creator": "author",
     "Publisher": "publisher",
     "ContactPerson": "pointOfContact",  ## Any ContactPerson should be considered a Resource Support Contact
-    "DataCollector": "",
+    "DataCollector": "contributor",
     "DataCurator": "custodian",
     "DataManager": "custodian",
     "Distributor": "distributor",
@@ -17,7 +17,7 @@ roleMappingDataCiteToISO = {
     "HostingInstitution": "resourceProvider",
     "Producer": "mediator",
     "ProjectLeader": "principalInvestigator",
-    "ProjectManager": "",
+    "ProjectManager": "collaborator",
     "ProjectMember": "contributor",
     "RegistrationAgency": "",
     "RegistrationAuthority": "",
@@ -56,29 +56,29 @@ parentXPaths = {
 }
 
 
-def translateDataCiteRecords():
-    """ batch translate DataCite Records and save to output directory. """
-
-    # Get records
-    records = getDataCiteRecords()
-
-    print("##", file=sys.stderr)
-    print(("## Translating " + str(len(records)) + " Records..."), file=sys.stderr)
-    print("##", file=sys.stderr)
-
-    # Loop over DataCite Records
-    for record in records:
-        xmlOutput = translateDataCiteRecord(record)
-
-        # Isolate the second part of a DOI identifier for the output file name
-        uniqueID = recordID.split('/')[1]
-
-        outputFilePath = 'defaultOutputRecords/' + uniqueID + '.xml'
-        f = open(outputFilePath, 'w')
-        f.write(xmlOutput)
-        f.close()
-
-    print('...Finished Translating Records.', file=sys.stderr)
+# def translateDataCiteRecords():
+#     """ batch translate DataCite Records and save to output directory. """
+#
+#     # Get records
+#     records = getDataCiteRecords()
+#
+#     print("##", file=sys.stderr)
+#     print(("## Translating " + str(len(records)) + " Records..."), file=sys.stderr)
+#     print("##", file=sys.stderr)
+#
+#     # Loop over DataCite Records
+#     for record in records:
+#         xmlOutput = translateDataCiteRecord(record)
+#
+#         # Isolate the second part of a DOI identifier for the output file name
+#         uniqueID = recordID.split('/')[1]
+#
+#         outputFilePath = 'defaultOutputRecords/' + uniqueID + '.xml'
+#         f = open(outputFilePath, 'w')
+#         f.write(xmlOutput)
+#         f.close()
+#
+#     print('...Finished Translating Records.', file=sys.stderr)
 
 
 def translateDataCiteRecord(record, templateFile):
@@ -239,7 +239,14 @@ def getRelatedIdentifierParts(relatedIdentifier):
 def getAuthors(record):
     """ Convert the list of creators into a list of author records. """
     creatorList = record["creators"]
-    authorList = [{"name": creator['name'], "role": 'author'} for creator in creatorList]
+    authorList = []
+    for creator in creatorList:
+        author = {"name": creator["name"], "role": 'author', "orcid_url": None}
+        if creator['nameIdentifiers']:
+            for identifier in creator['nameIdentifiers']:
+                if identifier['nameIdentifier'] and 'orcid' in identifier['nameIdentifier']:
+                    author['orcid_url'] = identifier['nameIdentifier']
+        authorList.append(author)
     # sys.stderr.write('authorList : %s\n' % authorList)
     return authorList
 
