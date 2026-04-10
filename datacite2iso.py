@@ -24,11 +24,11 @@ Example usage:
 
 Required arguments:
   
-       --doi            DOI code to translate
+       --doi <DOI>             DOI to translate
 
 Optional arguments:
 
-       --template       Custom ISO template to use from the 'templates' folder.  Default: datacite.xml 
+       --template <filename>   Custom ISO template to use from the 'templates' folder.  Default: datacite.xml 
 
 Program Version: '''
 
