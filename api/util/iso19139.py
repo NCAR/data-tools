@@ -11,27 +11,29 @@ import api.util.xml as xml
 
 
 childXPaths =  {
-     'individual'  : './/gmd:individualName/gco:CharacterString',
-     'position'    : './/gmd:positionName/gco:CharacterString',
-     'organization': './/gmd:organisationName/gco:CharacterString',
-     'email'       : './/gmd:contactInfo/gmd:CI_Contact/gmd:address/gmd:CI_Address/gmd:electronicMailAddress/gco:CharacterString',
-     'roleCode'    : './/gmd:role/gmd:CI_RoleCode',
-     'keyword'     : 'gmd:keyword/gco:CharacterString',
-     'repTypeCode' : 'gmd:MD_SpatialRepresentationTypeCode',
-     'distance'    : './/gco:Distance',
-     'real'        : 'gco:Real',
-     'string'      : 'gco:CharacterString',
-     'stringURL'   : 'gco:CharacterString[starts-with(.,"http://") or starts-with(.,"https://")]',
-     'linkage'     : 'gmd:linkage/gmd:URL',
-     'name'        : 'gmd:name/gco:CharacterString',
-     'description' : 'gmd:description/gco:CharacterString',
-     'extentBegin' : 'gml:TimePeriod/gml:beginPosition',
-     'extentEnd'   : 'gml:TimePeriod/gml:endPosition',
-     'westLong'    : './/gmd:westBoundLongitude/gco:Decimal',
-     'eastLong'    : './/gmd:eastBoundLongitude/gco:Decimal',
-     'northLat'    : './/gmd:northBoundLatitude/gco:Decimal',
-     'southLat'    : './/gmd:southBoundLatitude/gco:Decimal',
-     'relatedLink' : 'gmd:MD_MetadataExtensionInformation/gmd:extensionOnLineResource/gmd:CI_OnlineResource',
+     'individual'       : './/gmd:individualName',
+     'individual_char'  : './/gmd:individualName/gco:CharacterString',
+     'individual_anchor': './/gmd:individualName/gmx:Anchor',
+     'position'         : './/gmd:positionName/gco:CharacterString',
+     'organization'     : './/gmd:organisationName/gco:CharacterString',
+     'email'            : './/gmd:contactInfo/gmd:CI_Contact/gmd:address/gmd:CI_Address/gmd:electronicMailAddress/gco:CharacterString',
+     'roleCode'         : './/gmd:role/gmd:CI_RoleCode',
+     'keyword'          : 'gmd:keyword/gco:CharacterString',
+     'repTypeCode'      : 'gmd:MD_SpatialRepresentationTypeCode',
+     'distance'         : './/gco:Distance',
+     'real'             : 'gco:Real',
+     'string'           : 'gco:CharacterString',
+     'stringURL'        : 'gco:CharacterString[starts-with(.,"http://") or starts-with(.,"https://")]',
+     'linkage'          : 'gmd:linkage/gmd:URL',
+     'name'             : 'gmd:name/gco:CharacterString',
+     'description'      : 'gmd:description/gco:CharacterString',
+     'extentBegin'      : 'gml:TimePeriod/gml:beginPosition',
+     'extentEnd'        : 'gml:TimePeriod/gml:endPosition',
+     'westLong'         : './/gmd:westBoundLongitude/gco:Decimal',
+     'eastLong'         : './/gmd:eastBoundLongitude/gco:Decimal',
+     'northLat'         : './/gmd:northBoundLatitude/gco:Decimal',
+     'southLat'         : './/gmd:southBoundLatitude/gco:Decimal',
+     'relatedLink'      : 'gmd:MD_MetadataExtensionInformation/gmd:extensionOnLineResource/gmd:CI_OnlineResource',
    } 
 
 #
@@ -117,9 +119,25 @@ def modifyContactDataSelectively(contactElement, contactData):
     """ Modify contents of a "contact" XML element, a.k.a ResponsibleParty element.
         Only override XML values if fill values are given, so XML template values are unchanged. """
     nameValue = contactData.get('name', None)
-    if nameValue:
-        element = xml.getFirstElement(contactElement, childXPaths['individual'])
+    orcidValue = contactData.get('orcid_url', None)
+    individualElement = xml.getFirstElement(contactElement, childXPaths['individual'])
+    charElement = xml.getFirstElement(individualElement, 'gco:CharacterString')
+    anchorElement = xml.getFirstElement(individualElement, 'gmx:Anchor')
+    if nameValue and not orcidValue:
+        element = xml.getFirstElement(contactElement, childXPaths['individual_char'])
         xml.setTextOrMarkMissing(element, nameValue)
+        individualElement.remove(anchorElement)
+    elif nameValue and orcidValue:
+        element = xml.getFirstElement(contactElement, childXPaths['individual_anchor'])
+        xml.setTextOrMarkMissing(element, nameValue)
+        titleAttrib = "{http://www.w3.org/1999/xlink}title"
+        hrefAttrib = "{http://www.w3.org/1999/xlink}href"
+        element.attrib[hrefAttrib] = orcidValue
+        element.attrib[titleAttrib] = nameValue
+        individualElement.remove(charElement)
+    else:
+        # There is no individual author, and the Anchor element should be removed.
+        individualElement.remove(anchorElement)
 
     positionValue = contactData.get('position', None)
     if positionValue:
