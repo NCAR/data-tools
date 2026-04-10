@@ -9,7 +9,7 @@ import os.path
 import api.inputjson as input_json
 import api.translate.datacite as translate
 
-__version_info__ = ('2022', '11', '01')
+__version_info__ = ('2026', '04', '10')
 __version__ = '-'.join(__version_info__)
 
 PROGRAM_DESCRIPTION = '''
@@ -21,6 +21,14 @@ DataCite metadata is obtained from the DataCite website, so an internet connecti
 Example usage:
 
        python datacite2iso.py --doi 10.5065/D6WD3XH5   > test_datacite.xml
+
+Required arguments:
+  
+       --doi            DOI code to translate
+
+Optional arguments:
+
+       --template       Custom ISO template to use from the 'templates' folder.  Default: datacite.xml 
 
 Program Version: '''
 
