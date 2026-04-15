@@ -4,6 +4,7 @@
 # Ignore temporary files created by program
 pushedRecordIDs.txt
 *.xml
+*.csv
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
