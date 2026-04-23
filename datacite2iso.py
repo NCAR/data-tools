@@ -30,6 +30,9 @@ Optional arguments:
 
        --template <filename>   Custom ISO template to use from the 'templates' folder.  Default: datacite.xml 
 
+       --version               Print this program version and exit 
+       --help                  Print this program description and exit 
+
 Program Version: '''
 
 

@@ -31,7 +31,9 @@ Optional arguments:
        --inputDir  <path_to_dir>    Path to directory with ISO XML files; full directory hierarchy will be examined.
        --file      <path_to_file>   Path to ISO XML file to examine
        --datasetsOnly               Only examine ISO XML files with Resource Type: Dataset
+       
        --version                    Print this program version and exit 
+       --help                       Print this program description and exit 
 
  '''
 
