@@ -215,7 +215,8 @@ def getTemporalExtent(dates):
     beginDate = None
     endDate = None
     for dateDict in dates:
-        if 'dateType' in dateDict and dateDict['dateType'] == 'Collected':
+        if ('dateType' in dateDict and (dateDict['dateType'] == 'Collected' or
+                                        dateDict['dateType'] == 'Coverage')):
             beginDate = 'unknown'
             endDate = 'now'
             dateString = dateDict['date']
