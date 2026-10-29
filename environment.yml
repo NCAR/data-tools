@@ -2,7 +2,9 @@ name: data-tools
 channels:
 - conda-forge
 dependencies:
-- python == 3.8
+- python == 3.12
 - urllib3
 - lxml >= 4.2.1
 - requests
+- sickle
+- xmltodict
